@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinterest-Style Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+
+        .gallery-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .gallery {
+            column-count: 5;
+            column-gap: 15px;
+        }
+
+        @media (max-width: 1200px) {
+            .gallery {
+                column-count: 4;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .gallery {
+                column-count: 3;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .gallery {
+                column-count: 2;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .gallery {
+                column-count: 1;
+            }
+        }
+
+        .pin {
+            break-inside: avoid;
+            margin-bottom: 15px;
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .pin:hover {
+            transform: translateY(-5px);
+        }
+
+        .pin img {
+            width: 100%;
+            display: block;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .pin-title {
+            padding: 10px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: white;
+            margin: auto;
+            max-width: 800px;
+            width: 90%;
+            border-radius: 16px;
+            overflow: hidden;
+            animation: modalFadeIn 0.3s;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-image {
+            width: 100%;
+            display: block;
+        }
+
+        .modal-details {
+            padding: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .modal-description {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 30px;
+            height: 30px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: #333;
+            z-index: 1001;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #000000;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Zimmer</h1>
+    </div>
+
+    <div class="gallery-container">
+        <div class="gallery" id="gallery">
+            <!-- Pins will be dynamically generated here -->
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="close-modal" onclick="closeModal()">✕</div>
+        <div class="modal-content">
+            <img src="" alt="" class="modal-image" id="modal-image">
+            <div class="modal-details">
+                <h2 class="modal-title" id="modal-title"></h2>
+                <p class="modal-description" id="modal-description"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data - replace with your own content
+        const pinsData = [
+            {
+                id: 1,
+                imageUrl: "https://i.pinimg.com/736x/e4/42/9f/e4429f974970d9470b8aedb367ba0cf0.jpg",
+                title: "Colorful Summer Salad",
+                description: "A refreshing salad with fresh vegetables and citrus dressing. Perfect for hot summer days and outdoor gatherings. This recipe is both healthy and delicious!"
+            },
+            {
+                id: 2,
+                imageUrl: "https://i.pinimg.com/736x/f3/ba/8c/f3ba8ccdf65a717d6d5aa9981131063e.jpg",
+                title: "Modern Living Room",
+                description: "Minimalist living room design with neutral colors and natural materials. Features comfortable seating and plenty of natural light."
+            },
+            {
+                id: 3,
+                imageUrl: "https://i.pinimg.com/736x/0c/f0/3f/0cf03fab906eebf8907fb8e013d8263d.jpg",
+                title: "Mountain Hiking Trail",
+                description: "Scenic hiking trail through the mountains with breathtaking views. This 5-mile moderate trail offers spectacular vistas and diverse wildlife."
+            },
+            {
+                id: 4,
+                imageUrl: "https://i.pinimg.com/736x/a7/1b/e5/a71be5821f95dac7f1d806bdb409ca44.jpg",
+                title: "Handmade Pottery",
+                description: "Artisanal ceramic collection with organic forms and earthy glazes. Each piece is uniquely crafted and food-safe."
+            },
+            {
+                id: 5,
+                imageUrl: "https://i.pinimg.com/736x/51/12/8c/51128cb41eccbbe6b0a333d9128ea03c.jpg",
+                title: "Vintage Camera Collection",
+                description: "Rare and well-preserved film cameras from the 1950s-1970s. These functional pieces of history still produce beautiful photographs."
+            },
+            {
+                id: 6,
+                imageUrl: "https://i.pinimg.com/736x/b7/26/08/b72608503fe4da6b5a1fc99bd9ae3aea.jpg",
+                title: "Tropical Beach Sunset",
+                description: "Stunning sunset view from a secluded beach in Bali. The perfect destination for relaxation and rejuvenation."
+            },
+            {
+                id: 7,
+                imageUrl: "https://i.pinimg.com/736x/33/8f/d1/338fd1cf13d6f701410cc6b27ac50bea.jpg",
+                title: "Classic Chocolate Cake",
+                description: "Rich and moist chocolate cake with ganache frosting. This timeless dessert is perfect for celebrations or indulgent evenings."
+            },
+            {
+                id: 8,
+                imageUrl: "https://i.pinimg.com/736x/d0/6b/67/d06b6798c75e33c04f6b0360060ce131.jpg",
+                title: "Indoor Plant Corner",
+                description: "Create your own urban jungle with this selection of low-maintenance houseplants. Improves air quality and adds life to any room."
+            },
+            {
+                id: 9,
+                imageUrl: "https://i.pinimg.com/736x/89/b7/04/89b7043d5618427f058a4ed3833fb7ab.jpg",
+                title: "Yoga Morning Routine",
+                description: "15-minute morning yoga sequence to energize your day. Gentle stretches that improve flexibility and mental clarity."
+            },
+            {
+                id: 10,
+                imageUrl: "https://i.pinimg.com/736x/72/7d/f7/727df7231c38d27f56bc1d443dde47e4.jpg",
+                title: "Watercolor Techniques",
+                description: "Step-by-step guide for creating beautiful watercolor washes and textures. Perfect for beginners wanting to explore this expressive medium."
+            },
+            {
+                id: 11,
+                imageUrl: "https://i.pinimg.com/736x/40/80/83/40808303dfc96f8c2f43a0286e706e79.jpg",
+                title: "Vintage Bicycle",
+                description: "Restored classic bicycle with authentic details and modern functionality. A stylish way to explore the city."
+            },
+            {
+                id: 12,
+                imageUrl: "https://i.pinimg.com/736x/cb/c8/eb/cbc8ebfbde91c7e2be76e97f346fe22f.jpg",
+                title: "Cozy Reading Nook",
+                description: "Transform any corner into a comfortable retreat for reading and relaxation. Features soft textures and ambient lighting."
+            },
+            {
+                id: 13,
+                imageUrl: "https://i.pinimg.com/736x/00/95/e9/0095e9e718417bde525c8b8233d44f92.jpg",
+                title: "Street Photography",
+                description: "Candid urban scenes capturing everyday life in the city. Shot during the golden hour with natural lighting."
+            },
+            {
+                id: 14,
+                imageUrl: "https://i.pinimg.com/736x/7e/54/c6/7e54c6be963bf505a8881b3f586f247e.jpg",
+                title: "Italian Pasta Recipe",
+                description: "Authentic carbonara pasta made with traditional ingredients. A simple yet delicious dinner ready in under 30 minutes."
+            }
+        ];
+
+        // Function to generate random image placeholders (since we can't use external URLs)
+        function generateRandomImage(width, height) {
+            const colors = [
+                '#fd5c63', '#00a699', '#767676', '#ffb400', '#7b0051',
+                '#00d1c1', '#8ce071', '#ff7e82', '#ffb36b', '#374151'
+            ];
+            
+            return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}' viewBox='0 0 ${width} ${height}'%3E%3Crect width='${width}' height='${height}' fill='${colors[Math.floor(Math.random() * colors.length)]}' /%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' text-anchor='middle' fill='white' dominant-baseline='middle'%3EImage ${Math.floor(Math.random() * 1000)}%3C/text%3E%3C/svg%3E`;
+        }
+
+        // Generate pins
+        function generatePins() {
+            const gallery = document.getElementById('gallery');
+            
+            pinsData.forEach(pin => {
+                const pinElement = document.createElement('div');
+                pinElement.className = 'pin';
+                pinElement.setAttribute('data-id', pin.id);
+                pinElement.innerHTML = `
+                    <img src="${pin.imageUrl}" alt="${pin.title}">
+                    <div class="pin-title">${pin.title}</div>
+                `;
+                
+                pinElement.addEventListener('click', () => openModal(pin));
+                gallery.appendChild(pinElement);
+            });
+        }
+
+        // Open modal with pin details
+        function openModal(pin) {
+            const modal = document.getElementById('modal');
+            const modalImage = document.getElementById('modal-image');
+            const modalTitle = document.getElementById('modal-title');
+            const modalDescription = document.getElementById('modal-description');
+            
+            modalImage.src = pin.imageUrl;
+            modalImage.alt = pin.title;
+            modalTitle.textContent = pin.title;
+            modalDescription.textContent = pin.description;
+            
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+        }
+
+        // Close modal
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+
+        // Close modal when clicking outside the content
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Generate pins on page load
+        window.onload = generatePins;
+    </script>
+</body>
+</html>
