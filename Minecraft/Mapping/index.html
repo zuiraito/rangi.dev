@@ -21,33 +21,38 @@
 <div id="map"></div>
 
 <script>
-    var imageWidth = 5120;  // Change to your image width
-    var imageHeight = 4096; // Change to your image height
+    var imageWidth = 3072;  // Change to your image width
+    var imageHeight = 2048; // Change to your image height
+
+    // Calculate the aspect ratio of the image
+    var imageAspectRatio = imageWidth / imageHeight;
 
     var map = L.map('map', {
         crs: L.CRS.Simple,
         minZoom: -2,
         maxZoom: 6,
         center: [0, 0],
-        zoom: -1
+        zoom: -2
     });
 
+    // Define the bounds based on the image size
     var bounds = [[0, 0], [imageHeight, imageWidth]];
 
+    // Add the image overlay
     var overlay = L.imageOverlay('world.png', bounds).addTo(map);
 
     map.fitBounds(bounds);
 
-    // Handle zoom change to disable antialiasing for zoom >= 3
+    // Handle zoom change to disable anti-aliasing for zoom >= 3
     map.on('zoomend', function() {
         var currentZoom = map.getZoom();
         var imageLayer = document.querySelector('.leaflet-image-layer');
 
         if (currentZoom >= 1) {
-            // Remove antialiasing when zoom level is 3 or higher
-            imageLayer.style.imageRendering = 'pixelated'; // Remove antialiasing
+            // Remove anti-aliasing when zoom level is 3 or higher
+            imageLayer.style.imageRendering = 'pixelated'; // Remove anti-aliasing
         } else {
-            // Re-enable antialiasing for zoom levels lower than 3
+            // Re-enable anti-aliasing for zoom levels lower than 3
             imageLayer.style.imageRendering = 'auto'; // Default rendering
         }
     });
@@ -55,3 +60,4 @@
 
 </body>
 </html>
+
