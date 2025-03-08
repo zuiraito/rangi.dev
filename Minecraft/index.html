@@ -21,3 +21,66 @@
 
 </body>
 </html>
+ vim index.html
+ cat index.html 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Hover Coordinates</title>
+    <style>
+        #coordinates {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            display: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Graphic design is my passion!</h1>
+<p>My first paragraph.</p>
+
+<h2>Worldmap</h2>
+
+<details>
+    <summary>8.3.</summary>
+    <img id="hoverImage" src="https://github.com/user-attachments/assets/21ecc4a5-ac17-4b3d-95e8-d82e0438407b" alt="Italian Trulli">
+</details>
+
+<details>
+  <summary>Interaktiv (älter)</summary>
+ <div style="text-align: center;">
+  <iframe src="Mapping/index.html" width="80%" height="1000" style="border: none;"></iframe>
+  </div>
+</details>
+
+
+<div id="coordinates"></div>
+
+<script>
+    const img = document.getElementById("hoverImage");
+    const coords = document.getElementById("coordinates");
+
+    img.addEventListener("mousemove", function(event) {
+        let rect = img.getBoundingClientRect();
+        let x = event.clientX - rect.left - 2560;
+        let y = event.clientY - rect.top - 1025;
+        coords.style.left = `${event.pageX + 10}px`;
+        coords.style.top = `${event.pageY + 10}px`;
+        coords.textContent = `X: ${Math.floor(x)}, Y: ${Math.floor(y)}`;
+        coords.style.display = "block";
+    });
+
+    img.addEventListener("mouseleave", function() {
+        coords.style.display = "none";
+    });
+</script>
+
+</body>
+</html>
