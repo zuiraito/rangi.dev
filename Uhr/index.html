@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uhr</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Chicago', 'Courier New', monospace;
+            background: #c0c0c0;
+            color: #000;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+            background: #dcdcdc;
+            border-bottom: 2px solid #808080;
+            box-shadow: inset 0 -2px 0 #fff;
+        }
+        nav a {
+            text-decoration: none;
+            color: #000;
+            font-size: 1em;
+            padding: 5px 10px;
+            background: #e0e0e0;
+            border: 2px solid #808080;
+            box-shadow: inset -2px -2px 0 #fff, inset 2px 2px 0 #404040;
+        }
+        nav a:active {
+            box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #404040;
+        }
+        .container {
+            width: 80%;
+            max-width: 600px;
+            background: #dcdcdc;
+            padding: 20px;
+            border: 2px solid #808080;
+            box-shadow: inset -2px -2px 0 #fff, inset 2px 2px 0 #404040;
+        }
+        .title {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .card {
+            background: #e0e0e0;
+            padding: 10px;
+            border: 2px solid #808080;
+            box-shadow: inset -2px -2px 0 #fff, inset 2px 2px 0 #404040;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="#">Home</a>
+    </nav>
+    <div class="container">
+        <div class="title">Uhr</div>
+        <div class="grid">
+            <div class="card" id="countdown"></div>
+        </div>
+    <details>
+        <br>
+    <summary>Was ist das?</summary>
+        Es ist eine etwas nische Darstellung, hier wird die verbleibende Zeit in Minuten bis 22 Uhr angezeigt. Weiß nicht weshalb, aber wenn ich mich nach diesem Format richte, kriege ich pro Tag mehr hin. Man hat weniger das "ich wollte zwar um 15:00 damit anfangen aber es ist jetzt schon 15:02, deshalb fange ich um 15:30 an" Problem. Die Zeit wird auch oben im Browsertab angezeigt, damit man sich einfach passiv danach richten kann, ohne irgendeine Software herunterzuladen.
+</details>
+    </div>
+    <script>
+        function updateCountdown() {
+            const now = new Date();
+            const midnight = new Date();
+            midnight.setHours(24, 0, 0, 0);
+            
+            const diffMs = midnight - now;
+            const minutesLeft = Math.floor(diffMs / (1000 * 60)-120);
+            
+            document.getElementById('countdown').textContent = `${minutesLeft}`;
+            document.title = `⏳ ${minutesLeft}`;
+        }
+        
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    </script>
+</body>
+</html>
