@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sammelsurium</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Chicago', 'Courier New', monospace;
+            background: #c0c0c0;
+            color: #000;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+            background: #dcdcdc;
+            border-bottom: 2px solid #808080;
+            box-shadow: inset 0 -2px 0 #fff;
+        }
+        nav a {
+            text-decoration: none;
+            color: #000;
+            font-size: 1em;
+            padding: 5px 10px;
+            background: #e0e0e0;
+            border: 2px solid #808080;
+            box-shadow: inset -2px -2px 0 #fff, inset 2px 2px 0 #404040;
+        }
+        nav a:active {
+            box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #404040;
+        }
+        .container {
+            width: 80%;
+            max-width: 600px;
+            background: #dcdcdc;
+            padding: 20px;
+            border: 2px solid #808080;
+            box-shadow: inset -2px -2px 0 #fff, inset 2px 2px 0 #404040;
+        }
+        .title {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .card {
+            background: #e0e0e0;
+            padding: 10px;
+            border: 2px solid #808080;
+            box-shadow: inset -2px -2px 0 #fff, inset 2px 2px 0 #404040;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../">Home</a>
+    </nav>
+    <div class="container">
+	<h1 class="title">Sammelsurium</h1>
+	<p>Liste ungeordneten Wissens</p>
+        <div class="grid">
+            <div class="card"><b>Komprimierungsalgorithmen von Cloud-Speicherdiensten</b>
+                <p>Cloud-Speicherdienste verwenden nicht immer die besten Komprimierungsalgorithmen, um die Größe der hochgeladenen Dateien möglichst klein zu halten. Algorithmen die zu kleineren Datengrößen generieren sind energieaufwändiger, sodass es oft günstiger ist, mehr und größere Datenspeicher anzuschaffen. (3. April 2025)
+		</p>
+            </div>
+        </div>
+    </div>
+    </body>
+</html>
