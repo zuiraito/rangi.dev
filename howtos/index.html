@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sammelsurium</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Chicago', 'Courier New', monospace;
+            background: #c0c0c0;
+            color: #000;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+            background: #dcdcdc;
+            border-bottom: 2px solid #808080;
+            box-shadow: inset 0 -2px 0 #fff;
+        }
+        nav a {
+            text-decoration: none;
+            color: #000;
+            font-size: 1em;
+            padding: 5px 10px;
+            background: #e0e0e0;
+            border: 2px solid #808080;
+            box-shadow: inset -2px -2px 0 #fff, inset 2px 2px 0 #404040;
+        }
+        nav a:active {
+            box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #404040;
+        }
+        .container {
+            width: 80%;
+            max-width: 600px;
+            background: #dcdcdc;
+            padding: 20px;
+            border: 2px solid #808080;
+            box-shadow: inset -2px -2px 0 #fff, inset 2px 2px 0 #404040;
+        }
+        .title {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .card {
+            text-align: left;
+            background: #e0e0e0;
+            padding: 10px;
+            border: 2px solid #808080;
+            box-shadow: inset -2px -2px 0 #fff, inset 2px 2px 0 #404040;
+            font-size: 1.2em;
+        }
+        .code-block {
+            text-align: left;
+  display: block;
+  background-color: #f4f4f4;
+  color: #333;
+  padding: 9px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 12px;
+  white-space: pre-wrap; /* wrap long lines instead of horizontal scrolling */
+}
+
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../">Home</a>
+    </nav>
+    <div class="container">
+	<h1 class="title">HOW TOs</h1>
+	<p>Wie macht man das nochmal? (<a href="https://github.com/zuiraito/rangi.dev/blob/main/howtos/index.html">bearbeiten</a>).</p>
+        <div class="grid">
+
+<details>
+<summary>Animiertes GIF erstellen</summary>
+<div class="card"><b>GIF</b>
+    <pre><code class="code-block">
+magick -delay 10 -loop 0 *.jpg -resize 800x600 -colors 1024 -layers Optimize jio.gif
+    </pre></code>
+
+</div>
+</details>
+
+
+
+                 </div>
+    </div>
+    </body>
+</html>
