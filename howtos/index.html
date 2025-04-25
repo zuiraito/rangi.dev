@@ -95,11 +95,51 @@
 	<p>Wie macht man das nochmal? (<a href="https://github.com/zuiraito/rangi.dev/blob/main/howtos/index.html">bearbeiten</a>).</p>
         <div class="grid">
 
-<div class="card"><b>Medien, Dokumente, Dateien.</b>
+<div class="card"><b>Terminal</b>
+	
 <details><summary>Animiertes GIF erstellen</summary><pre><code class="code-block">
 magick -delay 10 -loop 0 *.jpg -resize 800x600 -colors 1024 -layers Optimize jio.gif</pre></code></details>
+	
 <details><summary>PDFs Kombinieren</summary><pre><code class="code-block">
 pdftk * cat output OUTPUT.pdf</pre></code></details>
+	
+<details><summary>wifi</summary><pre><code class="code-block">
+nmcli d wifi list
+nmcli d wifi connect SSID password PW</pre></code></details>
+
+<details><summary>eduroam</summary><pre><code class="code-block">
+nmcli con add type wifi con-name "eduroam" ifname wlan0 ssid "eduroam" \
+    802-1x.eap peap \
+    802-1x.phase2-auth mschapv2 \
+    802-1x.identity "my_username" \
+    802-1x.password "my_password" \
+    wifi-sec.key-mgmt wpa-eap \
+    802-1x.ca-cert "/etc/ssl/certs/ca-certificates.crt"
+
+nmcli con up "eduroam"</pre></code></details>
+
+<details><summary>SSH</summary><pre><code class="code-block">
+# Installation
+sudo apt install openssh-server
+
+sudo systemctl status ssh
+
+# connection
+ssh user@ip
+
+# find ip
+ip a</pre></code></details>
+<details><summary>USB installations Medium</summary><pre><code class="code-block">
+# Storage device finden
+lsblk
+
+# Wenn .img.xz muss man die Datei decompressen
+xy -d path/to/image.img.xz
+
+# Flashen
+sudo dd if=path/to/your/image.img of=/dev/sdX bs=4M status=progress
+sync</pre></code></details>
+
 </div>
 
 
