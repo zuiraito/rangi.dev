@@ -150,12 +150,24 @@ sync</pre></code></details>
 <h3>Image flashen</h3>
 <p>Es gibt zwei Methoden, die Image-Datei zu flashen.</p>
 <h4>Grafisch (einfacher, alle Betriebssystheme)</h4>
-<p>Balena Etcher <a href="https://etcher.balena.io/#download-etcher">herunterladen</a> und starten.</p>
+<p>Balena Etcher <a href="https://etcher.balena.io/#download-etcher">herunterladen</a> und starten. 
+<br><code>Flash from file</code> -> Die gerade heruntergeladene .iso Datei Auswählen.
+<br><code>Select target</code> -> USB-Stick einstecken und auswählen. !Alle Dateien auf dem USB-Stick werden überschrieben.
+<br>Dann auf <code>Flash!</code> clicken, CMD erlauben änderungen auf dem Gerät zu machen. Dieser Vorgang dauert etwa 2 minuten.</p>
 <h4>Im Terminal (Linux, MacOS)</h4>
 <p>Diese Methode ist gefährlicher, da man bei Tippfehler mehr kaputt machen kann, jedoch muss man keine weiteren Programme herunterladen.</p>
+<p>1. USB finden</p>
+<pre><code class="code-block">
+lsblk
+</pre></code>
+<p>Dann mit dem <code>dd</code> command flashen (X mit dem usb buchstaben ersetzen).</p>
+<pre><code class="code-block">
+sudo dd if=pfad/zur/.iso/datai.iso of=/dev/sdX bs=4M status=progress && sync
+</pre></code>
 <pre><code class="code-block">
 </pre></code>
-
+<h2>USB stick Booten</h2>
+<p>Den Computer neustarten und die BIOS taste Drücken. Diese ist meist die <code>esc</code>, <code>F11</code>, <code>F12</code> oder <code>del</code> Taste. Man kann es im Internet nachschauen oder die <a href="https://packaged-media.redd.it/i8yldmqysvie1/pb/m2-res_720p.mp4?m=DASHPlaylist.mpd&v=1&e=1745611200&s=88611fa22c64568a25d19a6a83a952ba10842b37">Universalbiostaste</a> drücken.</p>
 </details>
 
 </div>
