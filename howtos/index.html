@@ -99,6 +99,9 @@
 	
 <details><summary>Animiertes GIF erstellen</summary><pre><code class="code-block">
 magick -delay 10 -loop 0 *.jpg -resize 800x600 -colors 1024 -layers Optimize jio.gif</pre></code></details>
+
+<details><summary>Bilder archivieren</summary><pre><code class="code-block">
+tar -cf - Pictures/ | pv | zstd -T0 -19 -o 25-07-03_bilder.tar.zst</pre></code></details>
 	
 <details><summary>PDFs Kombinieren</summary><pre><code class="code-block">
 pdftk * cat output OUTPUT.pdf</pre></code></details>
