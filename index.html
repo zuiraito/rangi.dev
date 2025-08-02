@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>【ラ】</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <h1>◆ rangi.dev ◆</h1>
+    <p>I can't design PCBs.</p>
+    <nav>
+      <a href="#projects">【Link】-not implemented</a>
+    </nav>
+  </header>
+
+    <div class="gallery-container">
+        <div class="gallery" id="gallery">
+            <!-- Pins will be dynamically generated here -->
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="close-modal" onclick="closeModal()">✕</div>
+        <div class="modal-content">
+            <img src="" alt="" class="modal-image" id="modal-image">
+            <div class="modal-details">
+                <h2 class="modal-title" id="modal-title"></h2>
+                <p class="modal-description" id="modal-description"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pinsData = [
+            {
+                id: 1,
+                title: "GPX Track Visualizer",
+                imageUrl: "https://i.imgur.com/d18c22i.png",
+		summary: "I couldn't find a tool for a job so I made it.",
+                description: "Basically i got frustrated with searching for a GPX visualizer that can generate Strava like heat maps from several .gpx files. This is a project written in C++ using SDL2 for GPU accelerated rendering. It aims to add click, drag and zoom movement similar to osm.net. Source code: ,a href='https://github.com/zuiraito/GPX-Track-Visualizer/blob/main/plot.cpp'>github</a>"
+            },
+            {
+                id: 1,
+                title: "",
+                imageUrl: "",
+		summary: "",
+                description: ""
+            },
+            {
+                id: 1,
+                title: "",
+                imageUrl: "",
+		summary: "",
+                description: ""
+            },
+                    ];
+
+        function generatePins() {
+            const gallery = document.getElementById('gallery');
+            pinsData.forEach(pin => {
+                const pinElement = document.createElement('div');
+                pinElement.className = 'pin';
+                pinElement.setAttribute('data-id', pin.id);
+                pinElement.innerHTML = `
+                    <div class="pin-title">${pin.title}</div>
+                    <img src="${pin.imageUrl}" alt="${pin.title}">
+                    <div class="pin-summary">${pin.summary}</div>
+                `;
+                pinElement.addEventListener('click', () => openModal(pin));
+                gallery.appendChild(pinElement);
+            });
+        }
+
+        function openModal(pin) {
+            document.getElementById('modal-image').src = pin.imageUrl;
+            document.getElementById('modal-title').textContent = pin.title;
+            document.getElementById('modal-description').textContent = pin.description;
+            document.getElementById('modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        window.addEventListener('click', function(event) {
+            if (event.target === document.getElementById('modal')) {
+                closeModal();
+            }
+        });
+
+        window.onload = generatePins;
+    </script>
+</body>
+</html>
+
+~/Code/portfolio/multocol vim index.html 
+~/Code/portfolio/multocol cat index.html 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>【ラ】</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <h1>◆ rangi.dev ◆</h1>
+    <p>I can't design PCBs.</p>
+    <nav>
+      <a href="uhr/">Uhr</a>
+      <a href="unsusablesammelsurium/">Sammelsurium</a>
+      <a href="howtos/">HOW TOs</a>
+      <a href="pinnwaende/">Pinnwände</a>
+    </nav>
+  </header>
+
+    <div class="gallery-container">
+        <div class="gallery" id="gallery">
+            <!-- Pins will be dynamically generated here -->
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="close-modal" onclick="closeModal()">✕</div>
+        <div class="modal-content">
+            <img src="" alt="" class="modal-image" id="modal-image">
+            <div class="modal-details">
+                <h2 class="modal-title" id="modal-title"></h2>
+                <p class="modal-description" id="modal-description"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pinsData = [
+            {
+                id: 1,
+                title: "Obligatory Mandelbrot Set",
+                imageUrl: "https://i.imgur.com/R9uqHeB.png",
+		summary: "Quick and dirty implementation that just works.",
+                description: "Quite an inefficiend and generally bad way of generating a zoom-video of the Mandelbrot Set. There definately do exist more elegant solutions to this but who needs that? I payed for yh whole CPU!! The code is uploaded to this <a hrf='https://github.com/zuiraito/mandelbrot'><reposetory</a> the bits that need to run quickly (the recursive functions) are written in c, the rest is written in python."
+            },
+            {
+                id: 2,
+                title: "GPX Track Visualizer",
+                imageUrl: "https://i.imgur.com/d18c22i.png",
+		summary: "I couldn't find a tool for a job so I made it.",
+                description: "Basically i got frustrated with searching for a GPX visualizer that can generate Strava like heat maps from several .gpx files. This is a project written in C++ using SDL2 for GPU accelerated rendering. It aims to add click, drag and zoom movement similar to osm.net. Source code: <a href='https://github.com/zuiraito/GPX-Track-Visualizer/blob/main/plot.cpp'>github</a>"
+            },
+            {
+                id: 3,
+                title: "A Slime Simulation",
+                imageUrl: "https://private-user-images.githubusercontent.com/116594953/382822737-d745ae48-e43a-4e9a-a811-18f7b3fc3058.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NTQxNjI4MjIsIm5iZiI6MTc1NDE2MjUyMiwicGF0aCI6Ii8xMTY1OTQ5NTMvMzgyODIyNzM3LWQ3NDVhZTQ4LWU0M2EtNGU5YS1hODExLTE4ZjdiM2ZjMzA1OC5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwODAyJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDgwMlQxOTIyMDJaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1jMDQ1Zjg2YTJmZGMyZTI5NDAyM2IxYTkwNjVlODNjYzU3OTlhMzQyZTQ5MGFjNTk2Nzg2YjQwMzUxZTRjYWEyJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.kJ3Vdkh-mIkz4zX8HCMiYFYh3Pa8_65RjGa5PPe--gc",
+		summary: "Read a paper about something yeast pathfinding and made this",
+                description: "<a href='https://github.com/zuiraito/Slime-Simulation?tab=readme-ov-file'>Code and more pictures</a>"
+            },
+            {
+                id: 4,
+                title: "",
+                imageUrl: "",
+		summary: "",
+                description: ""
+            },
+            {
+                id: 0,
+                title: "",
+                imageUrl: "",
+		summary: "",
+                description: ""
+            },
+                    ];
+
+function generatePins() {
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = ''; // Clear gallery first if needed
+
+    // Sort pinsData by id descending (highest id first)
+    const sortedPins = pinsData.slice().sort((a, b) => b.id - a.id);
+
+    sortedPins.forEach(pin => {
+        const pinElement = document.createElement('div');
+        pinElement.className = 'pin';
+        pinElement.setAttribute('data-id', pin.id);
+        pinElement.innerHTML = `
+            <div class="pin-title">${pin.title}</div>
+            <img src="${pin.imageUrl}" alt="${pin.title}">
+            <div class="pin-summary">${pin.summary}</div>
+        `;
+        pinElement.addEventListener('click', () => openModal(pin));
+        gallery.appendChild(pinElement);
+    });
+}
+
+        function openModal(pin) {
+            document.getElementById('modal-image').src = pin.imageUrl;
+            document.getElementById('modal-title').textContent = pin.title;
+            document.getElementById('modal-description').innerHTML = pin.description;
+            document.getElementById('modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        window.addEventListener('click', function(event) {
+            if (event.target === document.getElementById('modal')) {
+                closeModal();
+            }
+        });
+
+        window.onload = generatePins;
+    </script>
+</body>
+</html>
