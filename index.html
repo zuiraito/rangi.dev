@@ -11,13 +11,13 @@
     <h1>◆ rangi.dev ◆</h1>
     <p>I can't design PCBs.</p>
     <nav>
-      <a href="uhr/">Uhr</a>
-      <a href="unsusablesammelsurium/">Sammelsurium</a>
-      <a href="howtos/">HOW TOs</a>
-      <a href="pinnwaende/">Pinnwände</a>
+      <a href="#coding-gallery">【Coding】
+      <a href="#engineering-gallery">【Engineering】
+      <a href="uhr/">【Uhr】</a>
+      <a href="howtos/">【HOW TOs】</a>
+      <a href="pinnwaende/">【Pinnwände】</a>
     </nav>
   </header>
-
     <div class="gallery-container">
         <div class="gallery" id="gallery">
             <!-- Pins will be dynamically generated here -->
@@ -34,6 +34,14 @@
             </div>
         </div>
     </div>
+<!-- Coding Gallery  -->
+<section class="gallery-container">
+  <h2>◆ Coding Projects</h2>  <div class="gallery" id="coding-gallery"> </div>
+</section>
+<!-- Engineering Gallery  -->
+<section class="gallery-container">
+  <h2>◆ Engineering Projects</h2>  <div class="gallery" id="engineering-gallery"> </div>
+</section>
 
     <script>
         const pinsData = [
@@ -42,7 +50,7 @@
                 title: "Obligatory Mandelbrot Set",
                 imageUrl: "https://i.imgur.com/R9uqHeB.png",
 		summary: "Quick and dirty implementation that just works.",
-                description: "Quite an inefficiend and generally bad way of generating a zoom-video of the Mandelbrot Set. There definately do exist more elegant solutions to this but who needs that? I payed for yh whole CPU!! The code is uploaded to this <a hrf='https://github.com/zuiraito/mandelbrot'><reposetory</a> the bits that need to run quickly (the recursive functions) are written in c, the rest is written in python."
+                description: "Quite an inefficiend and generally bad way of generating a zoom-video of the Mandelbrot Set. There definately do exist more elegant solutions to this but who needs that? I payed for yh whole CPU!! The code is uploaded to this <a href='https://github.com/zuiraito/mandelbrot'>reposetory</a>. The bits that need to run quickly (the recursive functions) are written in c, the rest is written in python."
             },
             {
                 id: 2,
@@ -59,12 +67,23 @@
                 description: "<a href='https://github.com/zuiraito/Slime-Simulation?tab=readme-ov-file'>Code and more pictures</a>"
             },
             {
-                id: 0,
+                id: 4,
+                title: "Concept: Portable Dish Antenna",
+                imageUrl: "https://i.imgur.com/H3uxy1g.png",
+		summary: "A string based antenna or an umberlla that has a perfectly parabolic interior structure",
+                description: "A render of the closing animation can be viewed here: (<a href='https://github.com/zuiraito/Portable-Dish-Antenna'>link</a>) <p style='text-align:right; color:LightGray;'>(2025-08-02)</p>"
+            },
+
+/*    =========== Template ===========
+            {
+                id: ,
                 title: "",
                 imageUrl: "",
 		summary: "",
-                description: ""
+                description: "
+                <p style='text-align:right; color:LightGray;'>(date)</p>"
             },
+*/
                     ];
 
 function generatePins() {
@@ -87,6 +106,27 @@ function generatePins() {
         gallery.appendChild(pinElement);
     });
 }
+function generateSelectedPins(ids, targetId) {
+    const gallery = document.getElementById(targetId);
+    gallery.innerHTML = ''; // Clear existing pins if any
+
+    // Filter pins that match the provided IDs
+    const selectedPins = pinsData.filter(pin => ids.includes(pin.id));
+
+    selectedPins.forEach(pin => {
+        const pinElement = document.createElement('div');
+        pinElement.className = 'pin';
+        pinElement.setAttribute('data-id', pin.id);
+        pinElement.innerHTML = `
+            <div class="pin-title">${pin.title}</div>
+            <img src="${pin.imageUrl}" alt="${pin.title}">
+            <div class="pin-summary">${pin.summary}</div>
+        `;
+        pinElement.addEventListener('click', () => openModal(pin));
+        gallery.appendChild(pinElement);
+    });
+}
+
 
         function openModal(pin) {
             document.getElementById('modal-image').src = pin.imageUrl;
@@ -107,7 +147,16 @@ function generatePins() {
             }
         });
 
-        window.onload = generatePins;
+window.onload = function () {
+    generatePins();
+    generateSelectedPins([1, 2, 3], 'coding-gallery');
+    generateSelectedPins([4], 'engineering-gallery');
+};
+
     </script>
+  <footer class="footer">
+    <p>© 2025 Rangi Siebert</p>
+  </footer>
 </body>
 </html>
+
