@@ -11,7 +11,7 @@
     <h1>◆ rangi.dev ◆</h1>
     <p>I can't design PCBs.</p>
     <nav>
-      <a href="../">Home</a>
+      <a href="../">【back】</a>
     </nav>
   </header>
     <div class="gallery-container">
@@ -31,33 +31,78 @@
                 <p class="modal-description" id="modal-description"></p>
             </div>
         </div>
-    </div>     
+    </div>
+	      
+</section>
+
+	      
+
     <script>
         const pinsData = [
-            {
+	    {
                 id: 1,
-                title: "Remove the Firefox tab bar entirely",
-                imageUrl: "",
-		summary: "Peak digital minimalism.",
-                description: "<ol>
-                  <li>Enable user Chrome: enter <code>about:config</code> into the address bar, accept the risks.</li>
-                  <li>Search for <code>toolkit.legacyUserProfileCustomizations.stylesheets</code> and toggle it to <code>true</code>.</li>
-                  <li>Locate the profile folder by clicking on the "☰" then "Help" then "Troubleshooting Information" and open it.</li>
-                  <li>Create a new directory named <code>chrome</code>.</li>
-                  <li>Inside the <code>chrome</code> directory, create two new files, <code>userChrome.css</code> and <code>userContent.css</code> (case sensitive).</li>
-                  <li>Add the line <code>#TabsToolbar {visibility: collapse;}</code> or <code>TabsToolbar { visibility: collapse !important; }</code> if you only want to hide the tab bar and leave the navigation bar.</li>
-                  <li>Save the file and restart Firefox.</li>
-                  </ol>
-                <p style='text-align:right; color:LightGray;'>(date)</p>"
+                title: "Create an Animated GIF",
+                imageUrl: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fmedia.tenor.com%2FhnzC7PXesr0AAAAC%2Fcats.gif&f=1&nofb=1&ipt=277662d36ae8489e8ecc22f9a8b2273099cdf6fab8fdc4c8dd49af3d88581060",
+		summary: "<code>magick -delay 10 -loop 0 *.jpg -resize 800x600 -colors 1024 -layers Optimize jio.gif</code>",
+                description: "<code>magick -delay 10 -loop 0 *.jpg -resize 800x600 -colors 1024 -layers Optimize jio.gif</code>",
             },
-/*    =========== Template ===========
+            {
+                id: 2,
+                title: "Archive Pictures",
+                imageUrl: "https://i.imgur.com/i4To5jA.png",
+		summary: "<code>tar -cf - Pictures/ | pv | zstd -T0 -19 -o 25-07-03_bilder.tar.zst</code>",
+                description: "<code>tar -cf - Pictures/ | pv | zstd -T0 -19 -o 25-07-03_bilder.tar.zst</code>",
+            },
+            {
+                id: 3,
+                title: "Combine PDFs",
+                imageUrl: "https://imgur.com/GeSPjW2",
+                imageUrl: "https://i.imgur.com/i4To5jA.png",
+		summary: "pdftk * cat output OUTPUT.pdf",
+                description: "pdftk * cat output OUTPUT.pdf"
+            },
+            {
+                id: 4,
+                title: "Headless WiFi",
+                imageUrl: "https://i.imgur.com/i4To5jA.png",
+		summary: "<code>nmcli d wifi list<br>nmcli d wifi connect SSID password PW</code>",
+		description: "<code>nmcli d wifi list<br>nmcli d wifi connect SSID password PW</code>",
+            },
+            {
+                id: 5,
+                title: "Headless Eduroam",
+                imageUrl: "https://i.imgur.com/i4To5jA.png",
+		summary: "We all love eduroam",
+		description: `<code class="code-block"><br>nmcli con add type wifi con-name "eduroam" ifname wlan0 ssid "eduroam" \<br>    802-1x.eap peap \<br>    802-1x.phase2-auth mschapv2 \<br>    802-1x.identity "my_username" \<br>    802-1x.password "my_password" \<br>    wifi-sec.key-mgmt wpa-eap \<br>    802-1x.ca-cert "/etc/ssl/certs/ca-certificates.crt"<br><br>nmcli con up "eduroam"</pre></code>`,
+            },
+            {
+                id: 6,
+                title: "SSH",
+                imageUrl: "https://i.imgur.com/i4To5jA.png",
+		summary: "i'm in...",
+		description: `<code class="code-block"><br># Installation<br>sudo apt install openssh-server<br><br>sudo systemctl status ssh<br><br># connection<br>ssh user@ip<br># find ip<br><br>ip a</pre></code>r`,
+            },
+            {
+                id: 7,
+                title: "USB Installation Media",
+                imageUrl: "https://i.imgur.com/i4To5jA.png",
+		summary: "The first step",
+		description: `<pre><code class="code-block"><br># Storage device finden<br>lsblk<br><br># Wenn .img.xz muss man die Datei decompressen<br>xy -d path/to/image.img.xz<br><br># Flashen<br>sudo dd if=path/to/your/image.img of=/dev/sdX bs=4M status=progress<br>sync</pre></code>`,
+            },
+	    {
+                id: 8,
+                title: "Remove the Firefox tab bar entirely",
+                imageUrl: "https://i.imgur.com/Tp7RtpN.jpeg",
+		summary: "Peak digital minimalism.",
+                description: `<ol> <li>Enable user Chrome: enter <code>about:config</code> into the address bar, accept the risks.</li> <li>Search for <code>toolkit.legacyUserProfileCustomizations.stylesheets</code> and toggle it to <code>true</code>.</li>                  <li>Locate the profile folder by clicking on the "☰" then "Help" then "Troubleshooting Information" and open it.</li>                  <li>Create a new directory named <code>chrome</code>.</li>                  <li>Inside the <code>chrome</code> directory, create two new files, <code>userChrome.css</code> and <code>userContent.css</code> (case sensitive).</li>                  <li>Add the line <code>#TabsToolbar {visibility: collapse;}</code> or <code>TabsToolbar { visibility: collapse !important; }</code> if you only want to hide the tab bar and leave the navigation bar.</li>                  <li>Save the file and restart Firefox.</li>                  </ol>                <p style='text-align:right; color:LightGray;'>(2025-08-03)</p>`
+            },
+/*
             {
                 id: ,
                 title: "",
                 imageUrl: "",
 		summary: "",
-                description: "
-                <p style='text-align:right; color:LightGray;'>(date)</p>"
+                description: "<p style='text-align:right; color:LightGray;'>(date)</p>"
             },
 */
                     ];
@@ -135,3 +180,4 @@ window.onload = function () {
   </footer>
 </body>
 </html>
+
