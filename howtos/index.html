@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>【ラ】</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <h1>◆ rangi.dev ◆</h1>
+    <p>I can't design PCBs.</p>
+    <nav>
+      <a href="../">Home</a>
+    </nav>
+  </header>
+    <div class="gallery-container">
+        <div class="gallery" id="gallery">
+            <!-- Pins will be dynamically generated here -->
+		<noscript><p>javascript required</p></noscript>
+
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="close-modal" onclick="closeModal()">✕</div>
+        <div class="modal-content">
+            <img src="" alt="" class="modal-image" id="modal-image">
+            <div class="modal-details">
+                <h2 class="modal-title" id="modal-title"></h2>
+                <p class="modal-description" id="modal-description"></p>
+            </div>
+        </div>
+    </div>     
+    <script>
+        const pinsData = [
+            {
+                id: 1,
+                title: "Remove the Firefox tab bar entirely",
+                imageUrl: "",
+		summary: "Peak digital minimalism.",
+                description: "<ol>
+                  <li>Enable user Chrome: enter <code>about:config</code> into the address bar, accept the risks.</li>
+                  <li>Search for <code>toolkit.legacyUserProfileCustomizations.stylesheets</code> and toggle it to <code>true</code>.</li>
+                  <li>Locate the profile folder by clicking on the "☰" then "Help" then "Troubleshooting Information" and open it.</li>
+                  <li>Create a new directory named <code>chrome</code>.</li>
+                  <li>Inside the <code>chrome</code> directory, create two new files, <code>userChrome.css</code> and <code>userContent.css</code> (case sensitive).</li>
+                  <li>Add the line <code>#TabsToolbar {visibility: collapse;}</code> or <code>TabsToolbar { visibility: collapse !important; }</code> if you only want to hide the tab bar and leave the navigation bar.</li>
+                  <li>Save the file and restart Firefox.</li>
+                  </ol>
+                <p style='text-align:right; color:LightGray;'>(date)</p>"
+            },
+/*    =========== Template ===========
+            {
+                id: ,
+                title: "",
+                imageUrl: "",
+		summary: "",
+                description: "
+                <p style='text-align:right; color:LightGray;'>(date)</p>"
+            },
+*/
+                    ];
+
+function generatePins() {
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = ''; // Clear gallery first if needed
+
+    // Sort pinsData by id descending (highest id first)
+    const sortedPins = pinsData.slice().sort((a, b) => b.id - a.id);
+
+    sortedPins.forEach(pin => {
+        const pinElement = document.createElement('div');
+        pinElement.className = 'pin';
+        pinElement.setAttribute('data-id', pin.id);
+        pinElement.innerHTML = `
+            <div class="pin-title">${pin.title}</div>
+            <img src="${pin.imageUrl}" alt="${pin.title}">
+            <div class="pin-summary">${pin.summary}</div>
+        `;
+        pinElement.addEventListener('click', () => openModal(pin));
+        gallery.appendChild(pinElement);
+    });
+}
+function generateSelectedPins(ids, targetId) {
+    const gallery = document.getElementById(targetId);
+    gallery.innerHTML = ''; // Clear existing pins if any
+
+    // Filter pins that match the provided IDs
+    const selectedPins = pinsData.filter(pin => ids.includes(pin.id));
+
+    selectedPins.forEach(pin => {
+        const pinElement = document.createElement('div');
+        pinElement.className = 'pin';
+        pinElement.setAttribute('data-id', pin.id);
+        pinElement.innerHTML = `
+            <div class="pin-title">${pin.title}</div>
+            <img src="${pin.imageUrl}" alt="${pin.title}">
+            <div class="pin-summary">${pin.summary}</div>
+        `;
+        pinElement.addEventListener('click', () => openModal(pin));
+        gallery.appendChild(pinElement);
+    });
+}
+
+
+        function openModal(pin) {
+            document.getElementById('modal-image').src = pin.imageUrl;
+            document.getElementById('modal-title').textContent = pin.title;
+            document.getElementById('modal-description').innerHTML = pin.description;
+            document.getElementById('modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        window.addEventListener('click', function(event) {
+            if (event.target === document.getElementById('modal')) {
+                closeModal();
+            }
+        });
+
+window.onload = function () {
+    generatePins();
+    generateSelectedPins([1, 2, 3], 'coding-gallery');
+    generateSelectedPins([4], 'engineering-gallery');
+};
+
+    </script>
+  <footer class="footer">
+    <p>© 2025 Rangi Siebert</p>
+  </footer>
+</body>
+</html>
