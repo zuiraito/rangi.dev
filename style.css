@@ -1,5 +1,6 @@
 *, *::before, *::after {
   box-sizing: border-box;
+  margin-right: 1rem;
 }
 body {
   margin: 0;
