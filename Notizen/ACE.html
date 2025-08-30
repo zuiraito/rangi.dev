@@ -11,7 +11,7 @@
   </head>
   <body>
 
-	  <h1>Automatic Control Engineering</h1>
+	  <h1>1. Automatic Control Engineering</h1>
 	  <h2>Dynamic Systems</h2>
 	  <table>
 		  <tr>
@@ -151,6 +151,145 @@
 		  <figcaption>Two-degreed-of-freedom control including disturbance feedforward control</figcaption>
 		</figure>
 		<h3>We summarize</h3>
-		<p><b>Feedforward control</b> serves to shape the <b>tracking behavior</b> and to <b>reduce the influence of measurable disturbances</b></p>
-		<p><b>Feedback control</b> serves to <b>reduce the influence of non-measurable disturbances</b> and of <b>inaccuracies in the plant description</b>.</p>
+		<table>
+			<tr>
+				<th>Feedforward control</th>
+				<td>Serves to shape the <b>tracking behavior</b> and to <b>reduce the influence of measurable disturbances</b>.</td>
+			</tr>
+			<tr>
+				<th>Feedback control</th>
+				<td>Serves to <b>reduce the influence of non-measurable disturbances</b> and of <b>inaccuracies in the plant description</b>.</td>
+			</tr>
+		</table>
+		<h1>2. Models</h1>
+		<h2>Toricell Law</h2>
+		<p>For a tank the volume outflow \( q_\text{out}\) is related to the fill level \( h \), where \( a \) is the cross section area of the drain pipe and \( g \) is the acceleration due to gravity. 
+		\[
+		q_\text{out}(t) = a \sqrt{2gh(t)}
+		.\]
+		</p>
+		<h2>Proportional Variables</h2>
+		To simplify matter, often a proportionality is assumed. Example: The volume inflow \( q_\text{ in } \) is proportional to the angular position \( \phi \) and proportional to an inflow velocity \( v_\text{ in } \).
+		\[
+		q_\text{in}(t)= \underbrace{ K_Q }_{ \begin{split}&\text{ Proport. }\\ & \text{ factor } \end{split} } \cdot \phi(t) \cdot v_\text{ in }(t)
+		.\]
+		<h2>State-Space Representation</h2>
+		<p>Many dynamic systems can be represented by equations generally formulated with a model consisting of:
+		\[		\begin{split}		&
+		\begin{split}
+			 & \text{ state differential } \\
+			 & \text{ equations } \\
+		\end{split}  
+		\begin{cases}
+			\dot x_1 =  f_1(x_1 ... x_n, z, u) \\
+			  ~~~~~... \\
+			\dot x_n =  f_n(x_1 ... x_n, z, u) \\
+		\end{cases}  \\		&\\
+		& \text{ output equation }  ~~~~~~y=g(x_1,...,x_n) \\
+		\end{split} 
+		.\]
+		It is called a <b>state-space model</b>/representation, if the time responses \( x_1(t),...,x_n(t) \) are uniquely determined for know input signals \( u(t) \) and \( z(t) \) and given initial values \( x_1(0),...,x_n \). These \( n \) time responses together form the <b>trajectory</b>
+		</p>
+		<table>
+			<tr>
+				<th>State Variables<br> (usually as a vector)</th>
+				<td> \( x_1,...,x_n  = x(t) = 
+				\begin{bmatrix}
+					x_1(t)\\...\\x_n(t)
+				\end{bmatrix} 	\) </td>
+			</tr>
+			<tr>
+				<th>Input Signals</th>
+				<td> \( u(t), z(t) \) </td>
+			</tr>
+		</table>
+		<p>The state differential equations of the output equation can also be written using vectors
+		\[
+		\dot {\mathbf{ x }} = \mathbf{ f } ( \mathbf{ x } ,z,u )
+		,\]
+		\[
+		y=g( \mathbf{ x } )
+		.\]
+		Where the vector \( \mathbf{ f }  \) comprises \( f_1,...f_n \). If the right hand side of these equations consist exclusively <b>linear combinations</b> of the variables involved,
+		\[
+		\begin{split}
+			\dot x_1 &= a_{11}x_1+...+a_{1n}x_n+e_1z+b_1u,   \\
+			 & ... \\
+			\dot x_n &= a_{n1}x_1+...+a_{nn}x_n+e_nz+b_nu,   \\
+			\\
+			y &=  c_1x_1+...+c_n x_n,
+		\end{split} 
+		\]
+		then the (constant) coefficients can be summarised in vectors \( \mathbf{ e } , \mathbf{ b } , \mathbf{ c }   ^{ T } \) and a matrix \( \mathbf{ A } \).
+		\[
+		\begin{split}
+		\underbrace{ 
+			\begin{bmatrix}
+				\dot x_1\\...\\\dot x_n
+				\end{bmatrix} }_{ \dot{ \mathbf{x}}(t) }  = 
+				\underbrace{
+				\begin{bmatrix}
+					a_{11} & ... & a_{1n}\\
+					... & & \\
+					a_{n1} & & a_{nn}
+				\end{bmatrix}  }_{ \mathbf{ A }  } 
+				\underbrace{
+				\begin{bmatrix}
+					x_1\\...\\x_n
+				\end{bmatrix}  }_{ \mathbf{ x } (t) } + 
+				\underbrace{ 
+				\begin{bmatrix}
+					e_1\\\\e_n
+				\end{bmatrix} }_{ \mathbf{ e }   } z(t)+
+				\underbrace{ 
+				\begin{bmatrix}
+					b_1\\\\b_n
+					\end{bmatrix} }_{ b } u(t)~~~~ &~~~~ \text{ short } \dot{ \mathbf{ x } } = \mathbf{ Ax } + \mathbf{ e } z + \mathbf{ b } u\\
+			 y=
+			 \underbrace{ 
+			 \begin{bmatrix}
+			 	c_1&...&c_n
+			 \end{bmatrix} }_{ \mathbf{ c } ^{ T }  } 
+			 \underbrace{ 
+			 \begin{bmatrix}
+			 	x_1\\...\\x_n
+			 \end{bmatrix} }_{ \mathbf{ x } (t) } 
+			  ~~~~~~~~&~~~~ \text{ short } y= \mathbf{ c } ^{ T } \mathbf{ x }.   \\
+		\end{split} 
+		\] 
+		In rare cases, input signals can pass directly through to output \(y\). In this case, 
+		\[
+		y=g(x_1,...,x_n) ~~~~~\text{ becomes } ~~~~~y=g(x_1,...,x_n,z,u)= \mathbf{ c } ^{ T } \mathbf{ s } + d_1z	+ d_2u
+		.\] 
+		If there is no disturbance \(z\) to be taken into account, \(\dot{ \mathbf{ x } }\) is simplified to 
+		\[
+		\dot{ \mathbf{ x } }= \mathbf{ Ax } + \mathbf{ b } u
+		.\] 
+		</p>
+		<h2>Block Diagram</h2>
+		Also called signal flow diagram or structure diagram/scheme.
+		<ul>
+			<li>A block clearly assigns a time signal of the output variable to each time signal of the input variable \(\to\) acts as a <b>transfer element</b>.</li>
+			<li>The assigned rule (called <b>operator</b>) is written onto the block.</li>
+		</ul>
+		<table>
+			<tr>
+				<th>Blocks</th>
+				<td>Time variables</td>
+			</tr>
+			<tr>
+				<th>Arrows</th>
+				<td>Line of actions</td>
+			</tr>
+		</table>
+		<figure>
+		  <img src="Transfer element.png" alt="Control loop block diagram" width="750">
+		  <figcaption>Transfer element</figcaption>
+		</figure>
+		
+		
+		
+		
+		
+
 </html>
