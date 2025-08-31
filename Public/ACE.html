@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lecture 1 Notes</title>
+    <link rel="stylesheet" href="style.css">
+    <script id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+    </script>
+  </head>
+  <body>
+
+	  <h1>1. Automatic Control Engineering</h1>
+	  <h2>Dynamic Systems</h2>
+	  <table>
+		  <tr>
+			  <th>Control Input Variable</th>
+			  <td>can be specified in their course</td>
+		  </tr>
+		  <tr>
+			  <th>Disturbance Input</th>
+			  <td>mostly inaccurately known input variable</td>
+		  </tr>
+		  <tr> 
+			  <th>Transfer Element</th>
+			  <td>system with input and output variables</td>
+			  
+		  </tr>
+	  </table>
+	  <h2>Feedforward Control</h2>
+	  <ul>
+			<li>Is a transfer element (like the plant itself).</li>
+	    <li>Generates control input signal \(u(t)\) s.t. \(y(t)\) follows the <b>reference signal</b> \(w(t)\) as closely as possible.</li>
+	  	<li>The controller acts "blind".</li>
+			<li>Can use information from disturbance to correct the control signal.</li>
+			<li>The primary goal is good <b>tracking behavior</b>, i.e. to adapt \( y \) to changing reference \( w \).</li>
+			<figure>
+			  <img src="img/Plant and feedforward control.png" alt="Control loop block diagram" width="750">
+			  <figcaption></figcaption>
+			</figure>
+	  </ul>
+		<table>
+			<tr>
+				<th>Function</th>
+				<th>Name</th>
+			</tr>
+			<tr>
+				<td> \( w(t) \) </td>
+				<td> Reference  </td>
+			</tr>
+			<tr>
+				<td> \( u(t) \) </td>
+				<td> Input      </td>
+			</tr>
+			<tr>
+				<td> \( z(t) \) </td>
+				<td> Disturbance</td>
+			</tr>
+			<tr>
+				<td> \( y(t) \) </td>
+				<td> Output     </td>
+			</tr>
+		</table>
+		<p><b>Feedforward Controller:</b> The targeted influencing of \( y \) with negligible or measurable disturbance \( z \) is carried out by a feedforward controller.</p>
+  </body>
+	<h2>Feedback Control</h2>
+	<p>(sometimes called closed-loop control or control loop)</p>
+	<ul>
+		<li>The output variable is <b>measured</b>, <b>compared</b> and <b>corrected</b> via a controller (in case of deviation).</li>
+		<li>The <b>measuring device/element</b> detects the control output variable \( y \) and generates \( y'(t) \) as equivalent as possible to \( y(t) \).</li>
+		<li> \( y(t) \) may be falsified by <b>measuring noise</b> \( n(t) \).</li>
+		<li>The measuring noise is regarded as a component of the disturbance \( z(t) \) and not considered separately.</li>
+		<li>Occasionally the measuring element is accepted as ideal (e.g. \( y'(t)=y(t) \)), and is left out in the block diagram.</li>
+		<li>The <b>nominal-actual value comparison</b> generates the <b>control error</b>:
+			\[
+			e(t)=w(t)-y'(t)
+			.\]
+	</ul>
+	<figure>
+	  <img src="img/Block diagram of feedback control.png" alt="Control loop block diagram" width="750">
+	  <figcaption>Block diagram of feedback control</figcaption>
+	</figure>
+	<h3>The primary objective of feedback control</h3>
+	<p>is to reduce the impact of</p>
+	<ol>
+		<li>of disturbances and</li>
+		<li>of inaccuracies of the plant model.</li>
+		<li>Secondary objective: improve the tracking behavior</li>
+	</ol>
+	<table>
+		<tr>
+			<th>Reference signal \( w(t) \) </th>
+			<td>Externally specified <b>setpoint signal</b> for the control output variable \( y(t) \).</td>
+		</tr>
+		<tr>
+			<th>Control error \( e(t) \)</th>
+			<td>Results from comparing the reference signal with the measured control output signal and should be kept small.</td>
+		</tr>
+		<tr>
+			<th>Controller/Feedback controller</th>
+			<td>Transfer element which generates the control input signal \( u \) from the control error \( e \), so that \( y \) follows \( w \) as far as possible.</td>
+		</tr>
+		<tr>
+			<th>Measuring Element/Measuring Device</th>
+			<td>Detects the controlled variable \( y \) by means of a sensor and generates a signal \( y'(t) \) as equivalent as possible to \( y(t) \) </td>
+		</tr>
+	</table>
+	<h2>Feedforward + Feedback = Two-Degrees-of-Freedom Control</h2>
+	<table>
+		<tr>
+			<td></td>
+			<th>Feedback Control</th>
+			<th>Feedforward Control</th>
+		</tr>
+		<tr>
+			<th>Purpose</th>
+			<td>Respond to difference between the <b>actual output</b> and the <b>desired output</b> (the error).</td>
+			<td>Acts <b>based on the known input or reference</b> before the system output reacts.</td>
+		</tr>
+		<tr>
+			<th>Advantages</th>
+			<td>Naturally <b>rejects disturbances</b> and compensates for modeling inaccuracies because it continuously corrects deviations.</td>
+			<td>Can <b>shape the system response</b> (tracking behavior) effectively when the system model is accurate. For example, it can anticipate how the output should change and act proactively.</td>
+		</tr>
+		<tr>
+			<th>Limitations</th>
+			<td>The systems response is reactive, so it may introduce delays or overshoot.</td>
+			<td> <b>Does not reject disturbances</b> or unmodeled dynamics because it doesn't use feedback from the output.</td>
+		</tr>
+	</table>
+		<figure>
+		  <img src="img/Two-degrees-of-freedom control structure.png" alt="Control loop block diagram" width="750">
+		  <figcaption>Two-degrees-of-freedom control structure</figcaption>
+		</figure>
+		<p>
+			If <b>no disturbance</b> occurs: 
+			\[
+			\begin{split}
+			z=0 \implies & y=w \\
+			    \implies & e=0 \\
+					\implies & \text{feedback controller remains inactive.}
+			\end{split}
+			\]
+			If <b>a disturbance</b> occurs while \( w \) is zero/constant over a long period of time, the fault is fought by the feedback controller alone.
+		</p>
+		<p>Often the <b>trajectory generation</b> is included into the feedforward block and the two degrees of freedom structure.</p>
+		<h2>Disturbance Feedforward Control</h2>
+		<figure>
+		  <img src="img/Two-degreed-of-freedom control including disturbance feedforward control.png" alt="Control loop block diagram" width="750">
+		  <figcaption>Two-degreed-of-freedom control including disturbance feedforward control</figcaption>
+		</figure>
+		<h3>We summarize</h3>
+		<table>
+			<tr>
+				<th>Feedforward control</th>
+				<td>Serves to shape the <b>tracking behavior</b> and to <b>reduce the influence of measurable disturbances</b>.</td>
+			</tr>
+			<tr>
+				<th>Feedback control</th>
+				<td>Serves to <b>reduce the influence of non-measurable disturbances</b> and of <b>inaccuracies in the plant description</b>.</td>
+			</tr>
+		</table>
+		<h1>2. Models</h1>
+		<h2>Toricell Law</h2>
+		<p>For a tank the volume outflow \( q_\text{out}\) is related to the fill level \( h \), where \( a \) is the cross section area of the drain pipe and \( g \) is the acceleration due to gravity. 
+		\[
+		q_\text{out}(t) = a \sqrt{2gh(t)}
+		.\]
+		</p>
+		<h2>Proportional Variables</h2>
+		To simplify matter, often a proportionality is assumed. Example: The volume inflow \( q_\text{ in } \) is proportional to the angular position \( \phi \) and proportional to an inflow velocity \( v_\text{ in } \).
+		\[
+		q_\text{in}(t)= \underbrace{ K_Q }_{ \begin{split}&\text{ Proport. }\\ & \text{ factor } \end{split} } \cdot \phi(t) \cdot v_\text{ in }(t)
+		.\]
+		<h2>State-Space Representation</h2>
+		<p>Many dynamic systems can be represented by equations generally formulated with a model consisting of:
+		\[		\begin{split}		&
+		\begin{split}
+			 & \text{ state differential } \\
+			 & \text{ equations } \\
+		\end{split}  
+		\begin{cases}
+			\dot x_1 =  f_1(x_1 ... x_n, z, u) \\
+			  ~~~~~... \\
+			\dot x_n =  f_n(x_1 ... x_n, z, u) \\
+		\end{cases}  \\		&\\
+		& \text{ output equation }  ~~~~~~y=g(x_1,...,x_n) \\
+		\end{split} 
+		.\]
+		It is called a <b>state-space model</b>/representation, if the time responses \( x_1(t),...,x_n(t) \) are uniquely determined for know input signals \( u(t) \) and \( z(t) \) and given initial values \( x_1(0),...,x_n \). These \( n \) time responses together form the <b>trajectory</b>
+		</p>
+		<table>
+			<tr>
+				<th>State Variables<br> (usually as a vector)</th>
+				<td> \( x_1,...,x_n  = x(t) = 
+				\begin{bmatrix}
+					x_1(t)\\...\\x_n(t)
+				\end{bmatrix} 	\) </td>
+			</tr>
+			<tr>
+				<th>Input Signals</th>
+				<td> \( u(t), z(t) \) </td>
+			</tr>
+		</table>
+		<p>The state differential equations of the output equation can also be written using vectors
+		\[
+		\dot {\mathbf{ x }} = \mathbf{ f } ( \mathbf{ x } ,z,u )
+		,\]
+		\[
+		y=g( \mathbf{ x } )
+		.\]
+		Where the vector \( \mathbf{ f }  \) comprises \( f_1,...f_n \). If the right hand side of these equations consist exclusively <b>linear combinations</b> of the variables involved,
+		\[
+		\begin{split}
+			\dot x_1 &= a_{11}x_1+...+a_{1n}x_n+e_1z+b_1u,   \\
+			 & ... \\
+			\dot x_n &= a_{n1}x_1+...+a_{nn}x_n+e_nz+b_nu,   \\
+			\\
+			y &=  c_1x_1+...+c_n x_n,
+		\end{split} 
+		\]
+		then the (constant) coefficients can be summarised in vectors \( \mathbf{ e } , \mathbf{ b } , \mathbf{ c }   ^{ T } \) and a matrix \( \mathbf{ A } \).
+		\[
+		\begin{split}
+		\underbrace{ 
+			\begin{bmatrix}
+				\dot x_1\\...\\\dot x_n
+				\end{bmatrix} }_{ \dot{ \mathbf{x}}(t) }  = 
+				\underbrace{
+				\begin{bmatrix}
+					a_{11} & ... & a_{1n}\\
+					... & & \\
+					a_{n1} & & a_{nn}
+				\end{bmatrix}  }_{ \mathbf{ A }  } 
+				\underbrace{
+				\begin{bmatrix}
+					x_1\\...\\x_n
+				\end{bmatrix}  }_{ \mathbf{ x } (t) } + 
+				\underbrace{ 
+				\begin{bmatrix}
+					e_1\\\\e_n
+				\end{bmatrix} }_{ \mathbf{ e }   } z(t)+
+				\underbrace{ 
+				\begin{bmatrix}
+					b_1\\\\b_n
+					\end{bmatrix} }_{ b } u(t)~~~~ &~~~~ \text{ short } \dot{ \mathbf{ x } } = \mathbf{ Ax } + \mathbf{ e } z + \mathbf{ b } u\\
+			 y=
+			 \underbrace{ 
+			 \begin{bmatrix}
+			 	c_1&...&c_n
+			 \end{bmatrix} }_{ \mathbf{ c } ^{ T }  } 
+			 \underbrace{ 
+			 \begin{bmatrix}
+			 	x_1\\...\\x_n
+			 \end{bmatrix} }_{ \mathbf{ x } (t) } 
+			  ~~~~~~~~&~~~~ \text{ short } y= \mathbf{ c } ^{ T } \mathbf{ x }.   \\
+		\end{split} 
+		\] 
+		In rare cases, input signals can pass directly through to output \(y\). In this case, 
+		\[
+		y=g(x_1,...,x_n) ~~~~~\text{ becomes } ~~~~~y=g(x_1,...,x_n,z,u)= \mathbf{ c } ^{ T } \mathbf{ s } + d_1z	+ d_2u
+		.\] 
+		If there is no disturbance \(z\) to be taken into account, \(\dot{ \mathbf{ x } }\) is simplified to 
+		\[
+		\dot{ \mathbf{ x } }= \mathbf{ Ax } + \mathbf{ b } u
+		.\] 
+		</p>
+		<h2>Block Diagram</h2>
+		Also called signal flow diagram or structure diagram/scheme.
+		<ul>
+			<li>A block clearly assigns a time signal of the output variable to each time signal of the input variable \(\to\) acts as a <b>transfer element</b>.</li>
+			<li>The assigned rule (called <b>operator</b>) is written onto the block.</li>
+		</ul>
+		<table>
+			<tr>
+				<th>Blocks</th>
+				<td>Time variables</td>
+			</tr>
+			<tr>
+				<th>Arrows</th>
+				<td>Line of actions</td>
+			</tr>
+		</table>
+		<figure>
+		  <img src="img/Transfer element.png" alt="Control loop block diagram" width="750">
+		  <figcaption>Transfer element</figcaption>
+		</figure>
+		
+		
+		
+		
+		
+
+</html>
