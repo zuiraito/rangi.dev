@@ -6,19 +6,29 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 0; }
+    body { font-family: sans-serif; margin: 0; padding: 2rem; }
     #drop-area {
       width: 100%; height: 150px; border: 2px dashed #aaa;
       display: flex; align-items: center; justify-content: center;
+      flex-direction: column;
       margin-bottom: 20px;
+      cursor: pointer;
     }
+    #drop-area:hover { background: #f9f9f9; }
+    #fileInput { display: none; }
     #map { width: 100%; height: 400px; margin-top: 20px; }
     #detailChart { margin-top: 20px; }
+    button { padding: 1px 5px; font-size: 14px; cursor: pointer; }
   </style>
 </head>
 <body>
+<h1>Scatterplot</h1>
+<div id="drop-area">
+	Drag & Drop TCX or GPX files here
+  <button id="uploadBtn">Or select files manually</button>
+  <input type="file" id="fileInput" multiple accept=".tcx,.gpx">
+</div>
 
-<div id="drop-area">Drag & Drop TCX or GPX files here</div>
 <canvas id="scatterChart" width="900" height="500"></canvas>
 <div id="map"></div>
 <canvas id="detailChart" width="900" height="400"></canvas>
@@ -48,7 +58,7 @@ function averageMovingSpeedTcx(xml) {
     const speed = parseFloat(el.textContent);
     if (!isNaN(speed)) { sum += speed; count++; }
   });
-  return count > 0 ? (sum / count) * 3.6 : null; // km/h
+  return count > 0 ? (sum / count) * 3.6 : null;
 }
 function averageMovingSpeedGpx(xml) {
   const pts = xml.querySelectorAll("trkpt");
@@ -75,7 +85,7 @@ function averageMovingSpeedGpx(xml) {
 }
 
 // --- HR color gradient ---
-function hrToColor(hr, minHR = 100, maxHR = 200) {
+function hrToColor(hr, minHR = 100, maxHR = 180) {
   if (hr == null) return "gray";
   const t = Math.max(0, Math.min(1, (hr - minHR)/(maxHR - minHR)));
   if (t < 0.33) {
@@ -118,13 +128,11 @@ let scatterChart = new Chart(scatterCtx, {
       const p = scatterChart.data.datasets[0].data[activeScatterIndex];
       if (!p.track) return;
 
-      // --- Map update ---
       if (mapLayer) map.removeLayer(mapLayer);
       mapLayer = L.polyline(p.track, { color: "blue" }).addTo(map);
       map.fitBounds(mapLayer.getBounds());
       document.getElementById("map").scrollIntoView({ behavior: "smooth" });
 
-      // --- Build detail arrays ---
       const distArr = [], hrArr = [], speedArr = [], elevArr = [];
       let totalDist = 0, last = null;
 
@@ -162,13 +170,13 @@ let scatterChart = new Chart(scatterCtx, {
         });
       }
 
-      // --- Update detail chart ---
       detailChart.data.labels = distArr;
       detailChart.data.datasets = [
-        { label: 'Heart Rate (bpm)', data: hrArr, borderColor: 'red', yAxisID: 'y', pointRadius: 0 },
-        { label: 'Speed (km/h)', data: speedArr, borderColor: 'blue', yAxisID: 'y', pointRadius: 0 },
-        { label: 'Elevation (m)', data: elevArr, borderColor: 'green', yAxisID: 'y1', pointRadius: 0 }
+        { label: 'Speed (km/h)', data: speedArr, yAxisID: 'y', borderColor: 'rgba(80, 80, 255, 1)', backgroundColor: 'rgba(80, 80, 255, 1)', fill: false, pointRadius: 0 },
+        { label: 'Heart Rate (bpm)', data: hrArr, yAxisID: 'y2', borderColor: 'rgba(255, 80, 80, 1)', backgroundColor: 'rgba(255, 80, 80, 0.5)', fill: false, pointRadius: 0, hidden: true },
+        { label: 'Elevation (m)', data: elevArr, borderColor: 'rgba(0, 55, 0, 0.2)', backgroundColor: 'rgba(0, 80, 0, 0.5)', yAxisID: 'y1', fill: true, pointRadius: 0 }
       ];
+
       detailChart.update();
     }
   }
@@ -185,24 +193,13 @@ let detailChart = new Chart(detailCtx, {
     stacked: false,
     plugins: {
       title: { display: true, text: 'Activity Details' },
-      legend: {
-        display: true,
-        labels: { usePointStyle: true, pointStyle: 'line' }
-      }
+      legend: { display: true, labels: { usePointStyle: true, pointStyle: 'line' } }
     },
     scales: {
-      x: {
-        title: { display: true, text: 'Distance (km)' },
-        ticks: { callback: value => Number(value).toFixed(2) }
-      },
-      y: { 
-        title: { display: true, text: 'Speed (km/h) & Heart Rate (bpm)' },
-        min: 0, max: 180 // ensures HR and Speed share a tight axis
-      },
-      y1: { 
-        title: { display: true, text: 'Elevation (m)' },
-        position: 'right', grid: { drawOnChartArea: false }
-      }
+      x: { title: { display: true, text: 'Distance (km)' }, ticks: { callback: value => Number(value).toFixed(2) } },
+      y: { title: { display: true, text: 'Speed (km/h)' } },
+      y1: { title: { display: true, text: 'Elevation (m)' }, position: 'right', grid: { drawOnChartArea: false } },
+      y2: { title: { display: true, text: 'Heart Rate (bpm)' } }
     }
   }
 });
@@ -225,10 +222,8 @@ document.getElementById('detailChart').addEventListener('mousemove', evt => {
 });
 
 // --- File loading ---
-document.getElementById('drop-area').addEventListener('dragover', e => e.preventDefault());
-document.getElementById('drop-area').addEventListener('drop', e => {
-  e.preventDefault();
-  for (const file of e.dataTransfer.files) {
+function handleFiles(files) {
+  for (const file of files) {
     const reader = new FileReader();
     reader.onload = () => {
       const parser = new DOMParser();
@@ -244,9 +239,7 @@ document.getElementById('drop-area').addEventListener('drop', e => {
         xml.querySelectorAll("Trackpoint").forEach(tp => {
           const latEl = tp.querySelector("LatitudeDegrees");
           const lonEl = tp.querySelector("LongitudeDegrees");
-          if (latEl && lonEl) {
-            track.push([parseFloat(latEl.textContent), parseFloat(lonEl.textContent)]);
-          }
+          if (latEl && lonEl) track.push([parseFloat(latEl.textContent), parseFloat(lonEl.textContent)]);
         });
       } else if (file.name.toLowerCase().endsWith(".gpx")) {
         let totalDist = 0, last = null;
@@ -272,7 +265,17 @@ document.getElementById('drop-area').addEventListener('drop', e => {
     };
     reader.readAsText(file);
   }
-});
+}
+
+const dropArea = document.getElementById('drop-area');
+dropArea.addEventListener('dragover', e => e.preventDefault());
+dropArea.addEventListener('drop', e => { e.preventDefault(); handleFiles(e.dataTransfer.files); });
+
+// Manual upload button
+const fileInput = document.getElementById('fileInput');
+const uploadBtn = document.getElementById('uploadBtn');
+uploadBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => handleFiles(fileInput.files));
 </script>
 </body>
 </html>
