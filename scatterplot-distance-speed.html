@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TCX Scatter Plot</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      font-family: sans-serif;
+      position: relative;
+    }
+    #drop-area {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
+    }
+    #file-input-container {
+      position: absolute; top: 10px; left: 10px; z-index: 20;
+      background: rgba(255,255,255,0.9); padding: 8px; border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="drop-area"></div>
+<div id="file-input-container">
+  <label>
+    Select TCX files:
+    <input type="file" id="file-input" accept=".tcx" multiple>
+  </label>
+</div>
+
+<canvas id="scatterChart" width="900" height="500"></canvas>
+
+<script>
+const dropArea = document.getElementById('drop-area');
+const fileInput = document.getElementById('file-input');
+const ctx = document.getElementById('scatterChart').getContext('2d');
+
+// Average moving speed from <Speed>
+function averageMovingSpeed(xml) {
+  const speedEls = xml.querySelectorAll("Trackpoint Extensions TPX Speed");
+  let sum = 0, count = 0;
+  speedEls.forEach(el => {
+    const speed = parseFloat(el.textContent);
+    if (!isNaN(speed)) { sum += speed; count++; }
+  });
+  return count > 0 ? (sum / count) * 3.6 : null; // km/h
+}
+
+// Map heart rate to color gradient
+function hrToColor(hr, minHR = 100, maxHR = 200) {
+  const t = Math.max(0, Math.min(1, (hr - minHR)/(maxHR - minHR)));
+  if (t < 0.33) {
+    const p = t/0.33;
+    return `rgb(${0*p+0}, ${0*(1-p)+255*p}, 255)`;        // blue → green
+  } else if (t < 0.66) {
+    const p = (t-0.33)/0.33;
+    return `rgb(${255*p}, 255, 0)`;                        // green → orange
+  } else {
+    const p = (t-0.66)/0.34;
+    return `rgb(255, ${165*(1-p)}, 0)`;                    // orange → red
+  }
+}
+
+let chart = new Chart(ctx, {
+  type: 'scatter',
+  data: { datasets: [{ label: 'Activities', data: [], backgroundColor: [] }] },
+  options: {
+    scales: {
+      x: { type: 'logarithmic', title: { display: true, text: 'Distance (km, log scale)' } },
+      y: { title: { display: true, text: 'Average Moving Speed (km/h)' } }
+    },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: ctx => `Distance: ${ctx.raw.x.toFixed(1)} km, Speed: ${ctx.raw.y.toFixed(1)} km/h, HR: ${ctx.raw.hr}`
+        }
+      }
+    }
+  }
+});
+
+// Common file handler
+function handleFiles(files) {
+  for (const file of files) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(reader.result, "application/xml");
+
+      const distanceEl = xml.querySelector("DistanceMeters");
+      const distanceKm = distanceEl ? parseFloat(distanceEl.textContent)/1000 : null;
+
+      const hrEl = xml.querySelector("AverageHeartRateBpm Value");
+      const hr = hrEl ? parseFloat(hrEl.textContent) : null;
+
+      const avgMovingSpeed = averageMovingSpeed(xml);
+
+      if (distanceKm && avgMovingSpeed && hr) {
+        const color = hrToColor(hr);
+        chart.data.datasets[0].data.push({ x: distanceKm, y: avgMovingSpeed, hr });
+        chart.data.datasets[0].backgroundColor.push(color);
+        chart.update();
+      }
+    };
+    reader.readAsText(file);
+  }
+}
+
+// Drag & drop
+dropArea.addEventListener('dragover', e => { e.preventDefault(); });
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  handleFiles(e.dataTransfer.files);
+});
+
+// File input (manual selection)
+fileInput.addEventListener('change', e => {
+  handleFiles(fileInput.files);
+});
+</script>
+
+</body>
+</html>
+
