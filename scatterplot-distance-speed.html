@@ -1,44 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>TCX Scatter Plot</title>
+  <title>Activity Scatter Plot + Map</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    html, body {
-      margin: 0; padding: 0; width: 100%; height: 100%;
-      font-family: sans-serif;
-      position: relative;
-    }
+    body { font-family: sans-serif; margin: 0; padding: 0; }
     #drop-area {
-      position: fixed; top: 0; left: 0;
-      width: 100%; height: 100%;
-      z-index: 10;
+      width: 100%; height: 150px; border: 2px dashed #aaa;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
     }
-    #file-input-container {
-      position: absolute; top: 10px; left: 10px; z-index: 20;
-      background: rgba(255,255,255,0.9); padding: 8px; border-radius: 4px;
-    }
+    #map { width: 100%; height: 400px; margin-top: 20px; }
+    #detailChart { margin-top: 20px; }
   </style>
 </head>
 <body>
 
-<div id="drop-area"></div>
-<div id="file-input-container">
-  <label>
-    Select TCX files:
-    <input type="file" id="file-input" accept=".tcx" multiple>
-  </label>
-</div>
-
+<div id="drop-area">Drag & Drop TCX or GPX files here</div>
 <canvas id="scatterChart" width="900" height="500"></canvas>
+<div id="map"></div>
+<canvas id="detailChart" width="900" height="400"></canvas>
 
 <script>
-const dropArea = document.getElementById('drop-area');
-const fileInput = document.getElementById('file-input');
-const ctx = document.getElementById('scatterChart').getContext('2d');
+// --- Map setup ---
+const map = L.map('map').setView([48, 11], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+let mapLayer = null;
+let hoverMarker = null;
 
-// Average moving speed from <Speed>
-function averageMovingSpeed(xml) {
+// --- Haversine distance ---
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+  const dφ = (lat2-lat1) * Math.PI/180;
+  const dλ = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// --- Average moving speed ---
+function averageMovingSpeedTcx(xml) {
   const speedEls = xml.querySelectorAll("Trackpoint Extensions TPX Speed");
   let sum = 0, count = 0;
   speedEls.forEach(el => {
@@ -47,80 +50,230 @@ function averageMovingSpeed(xml) {
   });
   return count > 0 ? (sum / count) * 3.6 : null; // km/h
 }
+function averageMovingSpeedGpx(xml) {
+  const pts = xml.querySelectorAll("trkpt");
+  let dist = 0, movingTime = 0;
+  let last = null;
+  pts.forEach(pt => {
+    const lat = parseFloat(pt.getAttribute("lat"));
+    const lon = parseFloat(pt.getAttribute("lon"));
+    const timeEl = pt.querySelector("time");
+    if (timeEl) {
+      const time = new Date(timeEl.textContent).getTime();
+      if (last) {
+        const d = haversine(lat, lon, last.lat, last.lon);
+        const dt = (time - last.time) / 1000;
+        if (dt > 0 && d/dt > 0.5) {
+          dist += d;
+          movingTime += dt;
+        }
+      }
+      last = { lat, lon, time };
+    }
+  });
+  return movingTime > 0 ? (dist / movingTime) * 3.6 : null;
+}
 
-// Map heart rate to color gradient
+// --- HR color gradient ---
 function hrToColor(hr, minHR = 100, maxHR = 200) {
+  if (hr == null) return "gray";
   const t = Math.max(0, Math.min(1, (hr - minHR)/(maxHR - minHR)));
   if (t < 0.33) {
     const p = t/0.33;
-    return `rgb(${0*p+0}, ${0*(1-p)+255*p}, 255)`;        // blue → green
+    return `rgb(0, ${255*p}, ${255*(1-p)})`;
   } else if (t < 0.66) {
     const p = (t-0.33)/0.33;
-    return `rgb(${255*p}, 255, 0)`;                        // green → orange
+    return `rgb(${255*p}, 255, 0)`;
   } else {
     const p = (t-0.66)/0.34;
-    return `rgb(255, ${165*(1-p)}, 0)`;                    // orange → red
+    return `rgb(255, ${165*(1-p)}, 0)`;
   }
 }
 
-let chart = new Chart(ctx, {
+// --- Scatter chart (overview) ---
+const scatterCtx = document.getElementById('scatterChart').getContext('2d');
+let activeScatterIndex = null;
+
+let scatterChart = new Chart(scatterCtx, {
   type: 'scatter',
   data: { datasets: [{ label: 'Activities', data: [], backgroundColor: [] }] },
   options: {
     scales: {
-      x: { type: 'logarithmic', title: { display: true, text: 'Distance (km, log scale)' } },
-      y: { title: { display: true, text: 'Average Moving Speed (km/h)' } }
+      x: { type: 'logarithmic', title: { display: true, text: 'Distance (km, log)' } },
+      y: { title: { display: true, text: 'Avg Moving Speed (km/h)' } }
     },
     plugins: {
       tooltip: {
         callbacks: {
-          label: ctx => `Distance: ${ctx.raw.x.toFixed(1)} km, Speed: ${ctx.raw.y.toFixed(1)} km/h, HR: ${ctx.raw.hr}`
+          label: ctx => {
+            const p = ctx.raw;
+            return `${p.file} – ${p.x.toFixed(1)} km @ ${p.y.toFixed(1)} km/h, HR: ${p.hr ?? "n/a"}`;
+          }
         }
+      }
+    },
+    onClick: (evt, elems) => {
+      if (!elems.length) return;
+      activeScatterIndex = elems[0].index;
+      const p = scatterChart.data.datasets[0].data[activeScatterIndex];
+      if (!p.track) return;
+
+      // --- Map update ---
+      if (mapLayer) map.removeLayer(mapLayer);
+      mapLayer = L.polyline(p.track, { color: "blue" }).addTo(map);
+      map.fitBounds(mapLayer.getBounds());
+      document.getElementById("map").scrollIntoView({ behavior: "smooth" });
+
+      // --- Build detail arrays ---
+      const distArr = [], hrArr = [], speedArr = [], elevArr = [];
+      let totalDist = 0, last = null;
+
+      if (p.file.toLowerCase().endsWith(".tcx")) {
+        p.xml.querySelectorAll("Trackpoint").forEach(tp => {
+          const latEl = tp.querySelector("LatitudeDegrees");
+          const lonEl = tp.querySelector("LongitudeDegrees");
+          if (latEl && lonEl) {
+            const lat = parseFloat(latEl.textContent);
+            const lon = parseFloat(lonEl.textContent);
+            if (last) totalDist += haversine(lat, lon, last.lat, last.lon) / 1000;
+            last = { lat, lon };
+            distArr.push(totalDist);
+            const hrEl = tp.querySelector("HeartRateBpm Value");
+            const spdEl = tp.querySelector("Extensions TPX Speed");
+            const eleEl = tp.querySelector("AltitudeMeters");
+            hrArr.push(hrEl ? parseFloat(hrEl.textContent) : null);
+            speedArr.push(spdEl ? parseFloat(spdEl.textContent) * 3.6 : null);
+            elevArr.push(eleEl ? parseFloat(eleEl.textContent) : null);
+          }
+        });
+      } else if (p.file.toLowerCase().endsWith(".gpx")) {
+        p.xml.querySelectorAll("trkpt").forEach(pt => {
+          const lat = parseFloat(pt.getAttribute("lat"));
+          const lon = parseFloat(pt.getAttribute("lon"));
+          if (!isNaN(lat) && !isNaN(lon)) {
+            if (last) totalDist += haversine(lat, lon, last.lat, last.lon) / 1000;
+            last = { lat, lon };
+            distArr.push(totalDist);
+            const eleEl = pt.querySelector("ele");
+            hrArr.push(null);
+            speedArr.push(null);
+            elevArr.push(eleEl ? parseFloat(eleEl.textContent) : null);
+          }
+        });
+      }
+
+      // --- Update detail chart ---
+      detailChart.data.labels = distArr;
+      detailChart.data.datasets = [
+        { label: 'Heart Rate (bpm)', data: hrArr, borderColor: 'red', yAxisID: 'y', pointRadius: 0 },
+        { label: 'Speed (km/h)', data: speedArr, borderColor: 'blue', yAxisID: 'y', pointRadius: 0 },
+        { label: 'Elevation (m)', data: elevArr, borderColor: 'green', yAxisID: 'y1', pointRadius: 0 }
+      ];
+      detailChart.update();
+    }
+  }
+});
+
+// --- Detail chart ---
+const detailCtx = document.getElementById('detailChart').getContext('2d');
+let detailChart = new Chart(detailCtx, {
+  type: 'line',
+  data: { labels: [], datasets: [] },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    stacked: false,
+    plugins: {
+      title: { display: true, text: 'Activity Details' },
+      legend: {
+        display: true,
+        labels: { usePointStyle: true, pointStyle: 'line' }
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Distance (km)' },
+        ticks: { callback: value => Number(value).toFixed(2) }
+      },
+      y: { 
+        title: { display: true, text: 'Speed (km/h) & Heart Rate (bpm)' },
+        min: 0, max: 220 // ensures HR and Speed share a tight axis
+      },
+      y1: { 
+        title: { display: true, text: 'Elevation (m)' },
+        position: 'right', grid: { drawOnChartArea: false }
       }
     }
   }
 });
 
-// Common file handler
-function handleFiles(files) {
-  for (const file of files) {
+// --- Hover → vertical line & map marker ---
+document.getElementById('detailChart').addEventListener('mousemove', evt => {
+  const points = detailChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+  if (points.length && activeScatterIndex != null) {
+    const idx = points[0].index;
+    const p = scatterChart.data.datasets[0].data[activeScatterIndex];
+    if (p && p.track) {
+      const trackPoint = p.track[idx] || p.track[p.track.length-1];
+      if (hoverMarker) map.removeLayer(hoverMarker);
+      hoverMarker = L.circleMarker(trackPoint, { radius: 6, color: 'red' }).addTo(map);
+    }
+  } else if (hoverMarker) {
+    map.removeLayer(hoverMarker);
+    hoverMarker = null;
+  }
+});
+
+// --- File loading ---
+document.getElementById('drop-area').addEventListener('dragover', e => e.preventDefault());
+document.getElementById('drop-area').addEventListener('drop', e => {
+  e.preventDefault();
+  for (const file of e.dataTransfer.files) {
     const reader = new FileReader();
     reader.onload = () => {
       const parser = new DOMParser();
       const xml = parser.parseFromString(reader.result, "application/xml");
+      let distanceKm = null, avgMovingSpeed = null, hr = null, track = [];
 
-      const distanceEl = xml.querySelector("DistanceMeters");
-      const distanceKm = distanceEl ? parseFloat(distanceEl.textContent)/1000 : null;
+      if (file.name.toLowerCase().endsWith(".tcx")) {
+        const distanceEl = xml.querySelector("DistanceMeters");
+        distanceKm = distanceEl ? parseFloat(distanceEl.textContent)/1000 : null;
+        avgMovingSpeed = averageMovingSpeedTcx(xml);
+        const hrEl = xml.querySelector("AverageHeartRateBpm Value");
+        hr = hrEl ? parseFloat(hrEl.textContent) : null;
+        xml.querySelectorAll("Trackpoint").forEach(tp => {
+          const latEl = tp.querySelector("LatitudeDegrees");
+          const lonEl = tp.querySelector("LongitudeDegrees");
+          if (latEl && lonEl) {
+            track.push([parseFloat(latEl.textContent), parseFloat(lonEl.textContent)]);
+          }
+        });
+      } else if (file.name.toLowerCase().endsWith(".gpx")) {
+        let totalDist = 0, last = null;
+        xml.querySelectorAll("trkpt").forEach(pt => {
+          const lat = parseFloat(pt.getAttribute("lat"));
+          const lon = parseFloat(pt.getAttribute("lon"));
+          if (!isNaN(lat) && !isNaN(lon)) {
+            track.push([lat, lon]);
+            if (last) totalDist += haversine(lat, lon, last.lat, last.lon);
+            last = { lat, lon };
+          }
+        });
+        distanceKm = totalDist/1000;
+        avgMovingSpeed = averageMovingSpeedGpx(xml);
+      }
 
-      const hrEl = xml.querySelector("AverageHeartRateBpm Value");
-      const hr = hrEl ? parseFloat(hrEl.textContent) : null;
-
-      const avgMovingSpeed = averageMovingSpeed(xml);
-
-      if (distanceKm && avgMovingSpeed && hr) {
+      if (distanceKm && avgMovingSpeed) {
         const color = hrToColor(hr);
-        chart.data.datasets[0].data.push({ x: distanceKm, y: avgMovingSpeed, hr });
-        chart.data.datasets[0].backgroundColor.push(color);
-        chart.update();
+        scatterChart.data.datasets[0].data.push({ x: distanceKm, y: avgMovingSpeed, hr, file: file.name, track, xml });
+        scatterChart.data.datasets[0].backgroundColor.push(color);
+        scatterChart.update();
       }
     };
     reader.readAsText(file);
   }
-}
-
-// Drag & drop
-dropArea.addEventListener('dragover', e => { e.preventDefault(); });
-dropArea.addEventListener('drop', e => {
-  e.preventDefault();
-  handleFiles(e.dataTransfer.files);
-});
-
-// File input (manual selection)
-fileInput.addEventListener('change', e => {
-  handleFiles(fileInput.files);
 });
 </script>
-
 </body>
 </html>
 
