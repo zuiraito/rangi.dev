@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Heatmapper)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    #map { width: 100vw; height: 100vh; }
+    #controls {
+      position: absolute;
+      top: 10px; left: 50px;
+      background: rgba(255,255,255,0.95);
+      padding: 10px; border-radius: 6px;
+      z-index: 1000;
+      max-width: 240px;
+			display: none;
+    }
+		#map.dragover {
+  outline: 3px dashed #0077ff;
+  outline-offset: -3px;
+}
+
+    #controls label { font-size: 0.9em; display: block; margin-top: 6px; }
+    #controls input[type=range] { width: 100%; }
+    #controls button, #controls input[type=file] { margin-top: 6px; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+		<input type="file" id="fileInput" accept=".gpx,.tcx" multiple />
+    <button id="downloadBtn" disabled>Download combined.csv</button>
+
+		<label>Radius: <span id="radiusVal">10</span></label>
+		<input type="range" id="radiusSlider" min="1" max="30" step="1" value="10">
+		<label>Blur: <span id="blurVal">10</span></label>
+		<input type="range" id="blurSlider" min="1" max="30" step="1" value="10">
+  </div>
+  <div id="map"></div>
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <script>
+    const map = L.map('map').setView([0, 0], 2);
+
+
+
+// --- Custom Leaflet control for toggling #controls ---
+const toggleControls = L.Control.extend({
+  options: { position: 'topleft' },
+
+  onAdd: function(map) {
+    const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+    container.style.backgroundColor = 'white';
+    container.style.width = '30px';
+    container.style.height = '30px';
+    container.style.cursor = 'pointer';
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    container.innerHTML = '⚙'; // gear icon
+
+    container.onclick = function(){
+      const ctrl = document.getElementById('controls');
+      if(ctrl.style.display === 'none') ctrl.style.display = 'block';
+      else ctrl.style.display = 'none';
+    }
+
+    L.DomEvent.disableClickPropagation(container);
+    return container;
+  }
+});
+		map.addControl(new toggleControls());
+    let heatLayer;
+    let combinedData = [];
+
+    // defaults
+    let settings = {
+  radius: 10,
+  blur: 10,
+  maxZoom: 28,
+  max: 2.0,
+  minOpacity: 0.4,   // <-- makes faint points more visible
+};
+		// --- Dark/Light map toggle control ---
+const darkModeControl = L.Control.extend({
+  options: { position: 'topleft' },
+
+  onAdd: function(map) {
+    const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+    container.style.backgroundColor = 'white';
+    container.style.width = '30px';
+    container.style.height = '30px';
+    container.style.cursor = 'pointer';
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    container.innerHTML = '🌙'; // moon icon for dark mode
+
+    let dark = false;
+
+    container.onclick = () => {
+      if(dark) {
+        map.removeLayer(darkLayer);
+        map.addLayer(lightLayer);
+        container.innerHTML = '🌙';
+      } else {
+        map.removeLayer(lightLayer);
+        map.addLayer(darkLayer);
+        container.innerHTML = '☀️';
+      }
+      dark = !dark;
+    };
+
+    L.DomEvent.disableClickPropagation(container);
+    return container;
+  }
+});
+
+// --- Define the light and dark tile layers ---
+const lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OSM &copy; CARTO'
+}).addTo(map);
+
+const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OSM &copy; CARTO'
+});
+		// --- Preload dark tiles ---
+darkLayer.getContainer(); // triggers tile requests without displaying layer
+
+
+map.addControl(new darkModeControl());
+
+
+		// Initialize slider displays
+const radiusSlider = document.getElementById('radiusSlider');
+const blurSlider = document.getElementById('blurSlider');
+
+document.getElementById('radiusVal').textContent = radiusSlider.value;
+document.getElementById('blurVal').textContent = blurSlider.value;
+
+// Also update settings to match sliders
+settings.radius = parseInt(radiusSlider.value);
+settings.blur = parseInt(blurSlider.value);
+
+
+
+function parseGpx(text) {
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, "application/xml");
+  const points = [];
+  xml.querySelectorAll("trkpt").forEach(pt => {
+    const lat = parseFloat(pt.getAttribute("lat"));
+    const lon = parseFloat(pt.getAttribute("lon"));
+    if (!isNaN(lat) && !isNaN(lon)) {
+      points.push([lat, lon]);
+    }
+  });
+  return points;
+}
+
+function parseTcx(text) {   // NEW
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, "application/xml");
+  const points = [];
+  xml.querySelectorAll("Trackpoint").forEach(tp => {
+    const latEl = tp.querySelector("LatitudeDegrees");
+    const lonEl = tp.querySelector("LongitudeDegrees");
+    if (latEl && lonEl) {
+      const lat = parseFloat(latEl.textContent);
+      const lon = parseFloat(lonEl.textContent);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        points.push([lat, lon]);
+      }
+    }
+  });
+  return points;
+}
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const files = e.target.files;
+  if (!files.length) return;
+
+  combinedData = [];
+  let loaded = 0;
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      let points = [];
+      if (file.name.toLowerCase().endsWith(".gpx")) {
+        points = parseGpx(evt.target.result);
+      } else if (file.name.toLowerCase().endsWith(".tcx")) {
+        points = parseTcx(evt.target.result);
+      }
+      combinedData.push(...points);
+      loaded++;
+      if (loaded === files.length) {
+        updateMap();
+        document.getElementById('downloadBtn').disabled = false;
+      }
+    };
+    reader.readAsText(file);
+  });
+});
+
+function parseGpx(text) {
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, "application/xml");
+  const points = [];
+  xml.querySelectorAll("trkpt").forEach(pt => {
+    const lat = parseFloat(pt.getAttribute("lat"));
+    const lon = parseFloat(pt.getAttribute("lon"));
+    if (!isNaN(lat) && !isNaN(lon)) {
+      points.push([lat, lon]);
+    }
+  });
+  return points;
+}
+
+function parseTcx(text) {   // NEW
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, "application/xml");
+  const points = [];
+  xml.querySelectorAll("Trackpoint").forEach(tp => {
+    const latEl = tp.querySelector("LatitudeDegrees");
+    const lonEl = tp.querySelector("LongitudeDegrees");
+    if (latEl && lonEl) {
+      const lat = parseFloat(latEl.textContent);
+      const lon = parseFloat(lonEl.textContent);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        points.push([lat, lon]);
+      }
+    }
+  });
+  return points;
+}
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const files = e.target.files;
+  if (!files.length) return;
+
+  combinedData = [];
+  let loaded = 0;
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      let points = [];
+      if (file.name.toLowerCase().endsWith(".gpx")) {
+        points = parseGpx(evt.target.result);
+      } else if (file.name.toLowerCase().endsWith(".tcx")) {
+        points = parseTcx(evt.target.result);
+      }
+      combinedData.push(...points);
+      loaded++;
+      if (loaded === files.length) {
+        updateMap();
+        document.getElementById('downloadBtn').disabled = false;
+      }
+    };
+    reader.readAsText(file);
+  });
+});
+
+
+    function updateMap() {
+      if (!combinedData.length) {
+        alert("No points found in GPX files.");
+        return;
+      }
+      if (heatLayer) map.removeLayer(heatLayer);
+      heatLayer = L.heatLayer(combinedData, settings).addTo(map);
+
+      const bounds = L.latLngBounds(combinedData);
+      map.fitBounds(bounds);
+    }
+
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      if (!combinedData.length) return;
+      let csv = "Latitude,Longitude,Other\n";
+      csv += combinedData.map(p => `${p[0]},${p[1]},`).join("\n");
+
+      const blob = new Blob([csv], {type: "text/csv"});
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "combined.csv";
+      a.click();
+
+      URL.revokeObjectURL(url);
+    });
+
+    // Slider controls
+    document.getElementById('radiusSlider').addEventListener('input', (e) => {
+      settings.radius = parseInt(e.target.value);
+      document.getElementById('radiusVal').textContent = settings.radius;
+      if (combinedData.length) updateMap();
+    });
+
+    document.getElementById('blurSlider').addEventListener('input', (e) => {
+      settings.blur = parseInt(e.target.value);
+      document.getElementById('blurVal').textContent = settings.blur;
+      if (combinedData.length) updateMap();
+    });
+
+		// --- Drag & Drop support ---
+const mapDiv = document.getElementById("map");
+
+["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
+  mapDiv.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, false);
+});
+
+mapDiv.addEventListener("drop", (e) => {
+  const files = e.dataTransfer.files;
+  if (!files.length) return;
+
+  let loaded = 0;
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      let points = [];
+      if (file.name.toLowerCase().endsWith(".gpx")) {
+        points = parseGpx(evt.target.result);
+      } else if (file.name.toLowerCase().endsWith(".tcx")) {
+        points = parseTcx(evt.target.result);
+      }
+      combinedData.push(...points);
+      loaded++;
+      if (loaded === files.length) {
+        updateMap();
+        document.getElementById('downloadBtn').disabled = false;
+      }
+    };
+    reader.readAsText(file);
+  });
+});
+		// --- Highlight effect (CSS toggle) ---
+mapDiv.addEventListener("dragenter", () => mapDiv.classList.add("dragover"));
+mapDiv.addEventListener("dragleave", () => mapDiv.classList.remove("dragover"));
+mapDiv.addEventListener("drop", () => mapDiv.classList.remove("dragover"));
+
+
+
+  </script>
+</body>
+</html>
