@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8" />
   <title>Activity Scatter Plot + Map</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen/Control.FullScreen.css" />
+<script src="https://unpkg.com/leaflet.fullscreen/Control.FullScreen.js"></script>
+
   <style>
     body { font-family: sans-serif; margin: 0; padding: 2rem; }
     #drop-area {
@@ -24,10 +29,11 @@
 <body>
 <h1>Scatterplot</h1>
 <div id="drop-area">
-	Drag & Drop TCX or GPX files here
+  Drag & Drop TCX or GPX files here
   <button id="uploadBtn">Or select files manually</button>
   <input type="file" id="fileInput" multiple accept=".tcx,.gpx">
 </div>
+<p>.fit files can be converted to .txc using this <a href="https://github.com/zuiraito/rangi.dev/blob/main/convert_fit_to_gpx.sh">script</a>.</p>
 
 <canvas id="scatterChart" width="900" height="500"></canvas>
 <div id="map"></div>
@@ -35,12 +41,50 @@
 
 <script>
 // --- Map setup ---
-const map = L.map('map').setView([48, 11], 5);
+	// Define base tile layers
+const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+});
+
+const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenTopoMap contributors'
+});
+
+const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19
+});
+
+const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19
+});
+
+const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles © Esri'
+});
+
+// Initialize map with default layer
+const map = L.map('map', {
+  fullscreenControl: true,
+  layers: [cartoLight]  // start with OSM
+}).setView([48, 11], 5);
+// Add layer switcher control
+const baseMaps = {
+  "OpenStreetMap": osm,
+  "Topo Map": topo,
+  "Carto Light": cartoLight,
+  "Carto Dark": cartoDark,
+  "Esri Satellite": esriSat
+};
+L.control.layers(baseMaps).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-let mapLayer = null;
+let trackLayers = [];   // keep references to every polyline (all blue by default)
 let hoverMarker = null;
 
-// --- Haversine distance ---
+// --- Haversine ---
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
@@ -50,7 +94,7 @@ function haversine(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// --- Average moving speed ---
+// --- Average moving speed helpers ---
 function averageMovingSpeedTcx(xml) {
   const speedEls = xml.querySelectorAll("Trackpoint Extensions TPX Speed");
   let sum = 0, count = 0;
@@ -90,15 +134,117 @@ function hrToColor(hr, minHR = 100, maxHR = 180) {
   const t = Math.max(0, Math.min(1, (hr - minHR)/(maxHR - minHR)));
   if (t < 0.33) {
     const p = t/0.33;
-    return `rgb(0, ${255*p}, ${255*(1-p)})`;
+    return `rgb(0, ${Math.round(255*p)}, ${Math.round(255*(1-p))})`;
   } else if (t < 0.66) {
     const p = (t-0.33)/0.33;
-    return `rgb(${255*p}, 255, 0)`;
+    return `rgb(${Math.round(255*p)}, 255, 0)`;
   } else {
     const p = (t-0.66)/0.34;
-    return `rgb(255, ${165*(1-p)}, 0)`;
+    return `rgb(255, ${Math.round(165*(1-p))}, 0)`;
   }
 }
+
+// --- Detail chart plugins (vertical line + annotations) ---
+const verticalLinePlugin = {
+  id: 'verticalLine',
+  afterDatasetsDraw(chart) {
+    if (!chart.tooltip?.getActiveElements().length) return;
+    const ctx = chart.ctx;
+    const activePoint = chart.tooltip.getActiveElements()[0];
+    const datasetIndex = activePoint.datasetIndex;
+    const index = activePoint.index;
+    const x = chart.scales.x.getPixelForValue(chart.data.datasets[datasetIndex].data[index].x);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x, chart.chartArea.top);
+    ctx.lineTo(x, chart.chartArea.bottom);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'red';
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
+const detailAnnotationsPlugin = {
+  id: 'detailAnnotations',
+  afterDatasetsDraw(chart) {
+    const datasets = chart.data.datasets;
+    if (!datasets || datasets.length === 0) return;
+    if (!datasets[0].data || datasets[0].data.length === 0) return;
+
+    const ctx = chart.ctx;
+    let maxSpeed = -Infinity, maxHR = -Infinity, maxEle = -Infinity, minEle = Infinity;
+    let maxSpeedIndex = 0, maxHRIndex = 0, maxEleIndex = 0, minEleIndex = 0;
+
+    datasets.forEach(ds => {
+      if (!ds.data) return;
+      ds.data.forEach((pt, i) => {
+        if (ds.label === 'Speed (km/h)' && pt.y != null && pt.y > maxSpeed) {
+          maxSpeed = pt.y; maxSpeedIndex = i;
+        }
+        if (ds.label === 'Heart Rate (bpm)' && pt.y != null && pt.y > maxHR) {
+          maxHR = pt.y; maxHRIndex = i;
+        }
+        if (ds.label === 'Elevation (m)' && pt.y != null) {
+          if (pt.y > maxEle) { maxEle = pt.y; maxEleIndex = i; }
+          if (pt.y < minEle) { minEle = pt.y; minEleIndex = i; }
+        }
+      });
+    });
+
+    ctx.save();
+    ctx.fillStyle = 'black';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'left';
+
+    if (maxSpeed > -Infinity) {
+      const x = chart.scales.x.getPixelForValue(datasets[0].data[maxSpeedIndex].x);
+      const y = chart.scales.y.getPixelForValue(maxSpeed);
+      ctx.fillText(`Max Speed: ${maxSpeed.toFixed(1)} km/h`, x + 5, y - 5);
+    }
+    if (maxHR > -Infinity && datasets[1] && datasets[1].data[maxHRIndex]) {
+      const x = chart.scales.x.getPixelForValue(datasets[1].data[maxHRIndex].x);
+      const y = chart.scales.y2.getPixelForValue(maxHR);
+      ctx.fillText(`Max HR: ${maxHR.toFixed(0)} bpm`, x + 5, y - 5);
+    }
+    if (maxEle > -Infinity && datasets[2] && datasets[2].data[maxEleIndex]) {
+      const x = chart.scales.x.getPixelForValue(datasets[2].data[maxEleIndex].x);
+      const y = chart.scales.y1.getPixelForValue(maxEle);
+      ctx.fillText(`Max Elev: ${maxEle.toFixed(1)} m`, x + 5, y - 5);
+    }
+    if (minEle < Infinity && datasets[2] && datasets[2].data[minEleIndex]) {
+      const x = chart.scales.x.getPixelForValue(datasets[2].data[minEleIndex].x);
+      const y = chart.scales.y1.getPixelForValue(minEle);
+      ctx.fillText(`Min Elev: ${minEle.toFixed(1)} m`, x + 5, y + 15);
+    }
+
+    ctx.restore();
+  }
+};
+
+// --- Detail chart (full config) ---
+const detailCtx = document.getElementById('detailChart').getContext('2d');
+let detailChart = new Chart(detailCtx, {
+  type: 'line',
+  data: { labels: [], datasets: [] },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    stacked: false,
+    plugins: {
+      title: { display: true, text: 'Activity Details' },
+      legend: { display: true, labels: { usePointStyle: true, pointStyle: 'line' } }
+    },
+    scales: {
+      x: { type: 'linear', title: { display: true, text: 'Distance (km)' } },
+      y: { title: { display: true, text: 'Speed (km/h)' } },
+      y1: { title: { display: true, text: 'Elevation (m)' }, position: 'right', grid: { drawOnChartArea: false } },
+      y2: { title: { display: true, text: 'Heart Rate (bpm)' } }
+    }
+  },
+  plugins: [verticalLinePlugin, detailAnnotationsPlugin]
+});
 
 // --- Scatter chart (overview) ---
 const scatterCtx = document.getElementById('scatterChart').getContext('2d');
@@ -124,15 +270,24 @@ let scatterChart = new Chart(scatterCtx, {
     },
     onClick: (evt, elems) => {
       if (!elems.length) return;
-      activeScatterIndex = elems[0].index;
-      const p = scatterChart.data.datasets[0].data[activeScatterIndex];
-      if (!p.track) return;
+      const clickedIndex = elems[0].index;
+      activeScatterIndex = clickedIndex;
+      const p = scatterChart.data.datasets[0].data[clickedIndex];
+      if (!p || !p.track) return;
 
-      if (mapLayer) map.removeLayer(mapLayer);
-      mapLayer = L.polyline(p.track, { color: "blue" }).addTo(map);
-      map.fitBounds(mapLayer.getBounds());
+      // Reset style for all layers to blue
+      trackLayers.forEach(layer => layer.setStyle({ color: "blue", weight: 3 }));
+
+      // Highlight clicked layer (we stored the layer reference on the point)
+      if (p.layer) {
+        p.layer.setStyle({ color: "red", weight: 3, opacity: 1 });
+        p.layer.bringToFront();
+        map.fitBounds(p.layer.getBounds());
+      }
+
       document.getElementById("map").scrollIntoView({ behavior: "smooth" });
 
+      // Build arrays for the detail chart (reuse the XML inside p.xml for accurate per-point values)
       const distArr = [], hrArr = [], speedArr = [], elevArr = [];
       let totalDist = 0, last = null;
 
@@ -170,156 +325,50 @@ let scatterChart = new Chart(scatterCtx, {
         });
       }
 
+      // Update detail chart datasets
       detailChart.data.labels = distArr;
-			detailChart.data.datasets = [
-  {
-    label: 'Speed (km/h)',
-    data: distArr.map((d, i) => ({ x: d, y: speedArr[i] })),
-    yAxisID: 'y',
-    borderColor: 'rgba(80, 80, 255, 1)',
-    backgroundColor: 'rgba(80, 80, 255, 1)',
-    fill: false,
-    pointRadius: 0
+			const avgSpeed = speedArr.reduce((sum, v) => sum + (v || 0), 0) / speedArr.filter(v => v != null).length;
+
+      detailChart.data.datasets = [
+				{
+  label: 'Speed (km/h)',
+  data: distArr.map((d,i) => ({ x: d, y: speedArr[i] })),
+  yAxisID: 'y',
+  borderColor: 'rgba(80, 80, 255, 1)',
+					borderWidth: 1,
+  backgroundColor: 'rgba(80, 80, 255, 0.5)', // fill color
+  fill: {
+    target: { value: avgSpeed }  // use precomputed average
   },
-  {
-    label: 'Heart Rate (bpm)',
-    data: distArr.map((d, i) => ({ x: d, y: hrArr[i] })),
-    yAxisID: 'y2',
-    borderColor: 'rgba(255, 80, 80, 1)',
-    backgroundColor: 'rgba(255, 80, 80, 0.5)',
-    fill: false,
-    pointRadius: 0,
-    hidden: true
-  },
-  {
-    label: 'Elevation (m)',
-    data: distArr.map((d, i) => ({ x: d, y: elevArr[i] })),
-    yAxisID: 'y1',
-    borderColor: 'rgba(0, 55, 0, 0.2)',
-    backgroundColor: 'rgba(0, 80, 0, 0.5)',
-    fill: true,
-    pointRadius: 0
-  }
-];
-            detailChart.update();
+  pointRadius: 0
+        },
+        {
+          label: 'Heart Rate (bpm)',
+          data: distArr.map((d, i) => ({ x: d, y: hrArr[i] })),
+          yAxisID: 'y2',
+          borderColor: 'rgba(255, 80, 80, 1)',
+					borderWidth: 1,
+          backgroundColor: 'rgba(255, 80, 80, 0.5)',
+          fill: false,
+          pointRadius: 0,
+          hidden: true
+        },
+        {
+          label: 'Elevation (m)',
+          data: distArr.map((d, i) => ({ x: d, y: elevArr[i] })),
+          yAxisID: 'y1',
+          borderColor: 'rgba(0, 55, 0, 0.2)',
+          backgroundColor: 'rgba(0, 80, 0, 0.5)',
+          fill: true,
+          pointRadius: 0
+        }
+      ];
+      detailChart.update();
     }
   }
 });
 
-// --- Detail chart ---
-// Peaks
-const detailAnnotationsPlugin = {
-  id: 'detailAnnotations',
-  afterDatasetsDraw(chart) {
-    const datasets = chart.data.datasets;
-    if (!datasets || datasets.length === 0) return;
-
-    // Make sure each dataset has data
-    if (!datasets[0].data || datasets[0].data.length === 0) return;
-
-    const ctx = chart.ctx;
-    let maxSpeed = -Infinity, maxHR = -Infinity, maxEle = -Infinity, minEle = Infinity;
-    let maxSpeedIndex = 0, maxHRIndex = 0, maxEleIndex = 0, minEleIndex = 0;
-
-    // Iterate datasets to find the values
-    datasets.forEach(ds => {
-      if (!ds.data) return;
-      ds.data.forEach((pt, i) => {
-        if (ds.label === 'Speed (km/h)' && pt.y != null && pt.y > maxSpeed) {
-          maxSpeed = pt.y; maxSpeedIndex = i;
-        }
-        if (ds.label === 'Heart Rate (bpm)' && pt.y != null && pt.y > maxHR) {
-          maxHR = pt.y; maxHRIndex = i;
-        }
-        if (ds.label === 'Elevation (m)' && pt.y != null) {
-          if (pt.y > maxEle) { maxEle = pt.y; maxEleIndex = i; }
-          if (pt.y < minEle) { minEle = pt.y; minEleIndex = i; }
-        }
-      });
-    });
-
-    ctx.save();
-    ctx.fillStyle = 'black';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'left';
-
-    // Draw labels only if values are valid
-    if (maxSpeed > -Infinity) {
-      const x = chart.scales.x.getPixelForValue(datasets[0].data[maxSpeedIndex].x);
-      const y = chart.scales.y.getPixelForValue(maxSpeed);
-      ctx.fillText(`Max Speed: ${maxSpeed.toFixed(1)} km/h`, x + 5, y - 5);
-    }
-    if (maxHR > -Infinity) {
-      const x = chart.scales.x.getPixelForValue(datasets[1].data[maxHRIndex].x);
-      const y = chart.scales.y2.getPixelForValue(maxHR);
-      ctx.fillText(`Max HR: ${maxHR.toFixed(0)} bpm`, x + 5, y - 5);
-    }
-    if (maxEle > -Infinity) {
-      const x = chart.scales.x.getPixelForValue(datasets[2].data[maxEleIndex].x);
-      const y = chart.scales.y1.getPixelForValue(maxEle);
-      ctx.fillText(`Max Elev: ${maxEle.toFixed(1)} m`, x + 5, y - 5);
-    }
-    if (minEle < Infinity) {
-      const x = chart.scales.x.getPixelForValue(datasets[2].data[minEleIndex].x);
-      const y = chart.scales.y1.getPixelForValue(minEle);
-      ctx.fillText(`Min Elev: ${minEle.toFixed(1)} m`, x + 5, y + 15);
-    }
-
-    ctx.restore();
-  }
-};
-
-// Red line
-const verticalLinePlugin = {
-  id: 'verticalLine',
-  afterDatasetsDraw(chart) {
-    if (!chart.tooltip?.getActiveElements().length) return;
-
-    const ctx = chart.ctx;
-    const activePoint = chart.tooltip.getActiveElements()[0];
-
-    // Get the X coordinate for the hovered index
-    const datasetIndex = activePoint.datasetIndex;
-    const index = activePoint.index;
-    const x = chart.scales.x.getPixelForValue(
-      chart.data.datasets[datasetIndex].data[index].x
-    );
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(x, chart.chartArea.top);
-    ctx.lineTo(x, chart.chartArea.bottom);
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = 'red';
-    ctx.stroke();
-    ctx.restore();
-  }
-};
-
-const detailCtx = document.getElementById('detailChart').getContext('2d');
-let detailChart = new Chart(detailCtx, {
-  type: 'line',
-  data: { labels: [], datasets: [] },
-  options: {
-    responsive: true,
-    interaction: { mode: 'index', intersect: false },
-    stacked: false,
-    plugins: {
-      title: { display: true, text: 'Activity Details' },
-      legend: { display: true, labels: { usePointStyle: true, pointStyle: 'line' } }
-    },
-    scales: {
-      x: { type: 'linear', title: { display: true, text: 'Distance (km)' } },
-      y: { title: { display: true, text: 'Speed (km/h)' } },
-      y1: { title: { display: true, text: 'Elevation (m)' }, position: 'right', grid: { drawOnChartArea: false } },
-      y2: { title: { display: true, text: 'Heart Rate (bpm)' } }
-    }
-  },
-  plugins: [verticalLinePlugin, detailAnnotationsPlugin]
-});
-
-
-// --- Hover → vertical line & map marker ---
+// --- Hover → vertical line & map marker (on detail chart) ---
 document.getElementById('detailChart').addEventListener('mousemove', evt => {
   const points = detailChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
   if (points.length && activeScatterIndex != null) {
@@ -327,13 +376,15 @@ document.getElementById('detailChart').addEventListener('mousemove', evt => {
     const p = scatterChart.data.datasets[0].data[activeScatterIndex];
     if (p && p.track) {
       const trackPoint = p.track[idx] || p.track[p.track.length-1];
-      if (hoverMarker) map.removeLayer(hoverMarker);
-      hoverMarker = L.circleMarker(trackPoint, { radius: 6, color: 'red' }).addTo(map);
+      if (hoverMarker) { hoverMarker.remove(); hoverMarker = null; }
+      hoverMarker = L.circleMarker(trackPoint, { radius: 6, color: 'red', fill: true }).addTo(map);
     }
-  } else if (hoverMarker) {
-    map.removeLayer(hoverMarker);
-    hoverMarker = null;
+  } else {
+    if (hoverMarker) { hoverMarker.remove(); hoverMarker = null; }
   }
+});
+document.getElementById('detailChart').addEventListener('mouseleave', () => {
+  if (hoverMarker) { hoverMarker.remove(); hoverMarker = null; }
 });
 
 // --- File loading ---
@@ -343,6 +394,12 @@ function handleFiles(files) {
     reader.onload = () => {
       const parser = new DOMParser();
       const xml = parser.parseFromString(reader.result, "application/xml");
+      // If parsing failed, exit early (prevents undefined xml structure)
+      if (xml.querySelector && xml.querySelector('parsererror')) {
+        console.error('XML parse error for', file.name);
+        return;
+      }
+
       let distanceKm = null, avgMovingSpeed = null, hr = null, track = [];
 
       if (file.name.toLowerCase().endsWith(".tcx")) {
@@ -373,20 +430,42 @@ function handleFiles(files) {
 
       if (distanceKm && avgMovingSpeed) {
         const color = hrToColor(hr);
-        scatterChart.data.datasets[0].data.push({ x: distanceKm, y: avgMovingSpeed, hr, file: file.name, track, xml });
+        // Create the scatter-point object and keep the layer reference on it
+        const point = { x: distanceKm, y: avgMovingSpeed, hr, file: file.name, track, xml, layer: null };
+        scatterChart.data.datasets[0].data.push(point);
         scatterChart.data.datasets[0].backgroundColor.push(color);
         scatterChart.update();
+
+        // add blue polyline to map and store reference on the point
+				const layer = L.polyline(track, {
+  color: "blue",
+  weight: 4,       // a bit wider
+  opacity: 0.4     // more transparent
+}).addTo(map);
+
+trackLayers.push(layer);
+point.layer = layer;
+
+// make the polyline clickable
+layer.on("click", () => {
+  const idx = scatterChart.data.datasets[0].data.indexOf(point);
+  if (idx !== -1) {
+    // simulate scatter chart click
+    scatterChart.options.onClick(null, [{ datasetIndex: 0, index: idx }]);
+  }
+});
+
       }
     };
     reader.readAsText(file);
   }
 }
 
+// Drag & drop + manual upload handling
 const dropArea = document.getElementById('drop-area');
 dropArea.addEventListener('dragover', e => e.preventDefault());
 dropArea.addEventListener('drop', e => { e.preventDefault(); handleFiles(e.dataTransfer.files); });
 
-// Manual upload button
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
 uploadBtn.addEventListener('click', () => fileInput.click());
