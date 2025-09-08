@@ -1,4 +1,4 @@
-<!--  --><!--  --><!--  --><!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <title>Activity Scatter Plot + Map</title>
@@ -28,8 +28,6 @@
   <button id="uploadBtn">Or select files manually</button>
   <input type="file" id="fileInput" multiple accept=".tcx,.gpx">
 </div>
-<p>.fit files can be converted with <a href='https://github.com/zuiraito/rangi.dev/blob/main/convert_fit_to_gpx.sh'>this script</a>.</p>
-
 
 <canvas id="scatterChart" width="900" height="500"></canvas>
 <div id="map"></div>
@@ -173,18 +171,131 @@ let scatterChart = new Chart(scatterCtx, {
       }
 
       detailChart.data.labels = distArr;
-      detailChart.data.datasets = [
-        { label: 'Speed (km/h)', data: speedArr, yAxisID: 'y', borderColor: 'rgba(80, 80, 255, 1)', backgroundColor: 'rgba(80, 80, 255, 1)', fill: false, pointRadius: 0 },
-        { label: 'Heart Rate (bpm)', data: hrArr, yAxisID: 'y2', borderColor: 'rgba(255, 80, 80, 1)', backgroundColor: 'rgba(255, 80, 80, 0.5)', fill: false, pointRadius: 0, hidden: true },
-        { label: 'Elevation (m)', data: elevArr, borderColor: 'rgba(0, 55, 0, 0.2)', backgroundColor: 'rgba(0, 80, 0, 0.5)', yAxisID: 'y1', fill: true, pointRadius: 0 }
-      ];
-
-      detailChart.update();
+			detailChart.data.datasets = [
+  {
+    label: 'Speed (km/h)',
+    data: distArr.map((d, i) => ({ x: d, y: speedArr[i] })),
+    yAxisID: 'y',
+    borderColor: 'rgba(80, 80, 255, 1)',
+    backgroundColor: 'rgba(80, 80, 255, 1)',
+    fill: false,
+    pointRadius: 0
+  },
+  {
+    label: 'Heart Rate (bpm)',
+    data: distArr.map((d, i) => ({ x: d, y: hrArr[i] })),
+    yAxisID: 'y2',
+    borderColor: 'rgba(255, 80, 80, 1)',
+    backgroundColor: 'rgba(255, 80, 80, 0.5)',
+    fill: false,
+    pointRadius: 0,
+    hidden: true
+  },
+  {
+    label: 'Elevation (m)',
+    data: distArr.map((d, i) => ({ x: d, y: elevArr[i] })),
+    yAxisID: 'y1',
+    borderColor: 'rgba(0, 55, 0, 0.2)',
+    backgroundColor: 'rgba(0, 80, 0, 0.5)',
+    fill: true,
+    pointRadius: 0
+  }
+];
+            detailChart.update();
     }
   }
 });
 
 // --- Detail chart ---
+// Peaks
+const detailAnnotationsPlugin = {
+  id: 'detailAnnotations',
+  afterDatasetsDraw(chart) {
+    const datasets = chart.data.datasets;
+    if (!datasets || datasets.length === 0) return;
+
+    // Make sure each dataset has data
+    if (!datasets[0].data || datasets[0].data.length === 0) return;
+
+    const ctx = chart.ctx;
+    let maxSpeed = -Infinity, maxHR = -Infinity, maxEle = -Infinity, minEle = Infinity;
+    let maxSpeedIndex = 0, maxHRIndex = 0, maxEleIndex = 0, minEleIndex = 0;
+
+    // Iterate datasets to find the values
+    datasets.forEach(ds => {
+      if (!ds.data) return;
+      ds.data.forEach((pt, i) => {
+        if (ds.label === 'Speed (km/h)' && pt.y != null && pt.y > maxSpeed) {
+          maxSpeed = pt.y; maxSpeedIndex = i;
+        }
+        if (ds.label === 'Heart Rate (bpm)' && pt.y != null && pt.y > maxHR) {
+          maxHR = pt.y; maxHRIndex = i;
+        }
+        if (ds.label === 'Elevation (m)' && pt.y != null) {
+          if (pt.y > maxEle) { maxEle = pt.y; maxEleIndex = i; }
+          if (pt.y < minEle) { minEle = pt.y; minEleIndex = i; }
+        }
+      });
+    });
+
+    ctx.save();
+    ctx.fillStyle = 'black';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'left';
+
+    // Draw labels only if values are valid
+    if (maxSpeed > -Infinity) {
+      const x = chart.scales.x.getPixelForValue(datasets[0].data[maxSpeedIndex].x);
+      const y = chart.scales.y.getPixelForValue(maxSpeed);
+      ctx.fillText(`Max Speed: ${maxSpeed.toFixed(1)} km/h`, x + 5, y - 5);
+    }
+    if (maxHR > -Infinity) {
+      const x = chart.scales.x.getPixelForValue(datasets[1].data[maxHRIndex].x);
+      const y = chart.scales.y2.getPixelForValue(maxHR);
+      ctx.fillText(`Max HR: ${maxHR.toFixed(0)} bpm`, x + 5, y - 5);
+    }
+    if (maxEle > -Infinity) {
+      const x = chart.scales.x.getPixelForValue(datasets[2].data[maxEleIndex].x);
+      const y = chart.scales.y1.getPixelForValue(maxEle);
+      ctx.fillText(`Max Elev: ${maxEle.toFixed(1)} m`, x + 5, y - 5);
+    }
+    if (minEle < Infinity) {
+      const x = chart.scales.x.getPixelForValue(datasets[2].data[minEleIndex].x);
+      const y = chart.scales.y1.getPixelForValue(minEle);
+      ctx.fillText(`Min Elev: ${minEle.toFixed(1)} m`, x + 5, y + 15);
+    }
+
+    ctx.restore();
+  }
+};
+
+// Red line
+const verticalLinePlugin = {
+  id: 'verticalLine',
+  afterDatasetsDraw(chart) {
+    if (!chart.tooltip?.getActiveElements().length) return;
+
+    const ctx = chart.ctx;
+    const activePoint = chart.tooltip.getActiveElements()[0];
+
+    // Get the X coordinate for the hovered index
+    const datasetIndex = activePoint.datasetIndex;
+    const index = activePoint.index;
+    const x = chart.scales.x.getPixelForValue(
+      chart.data.datasets[datasetIndex].data[index].x
+    );
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x, chart.chartArea.top);
+    ctx.lineTo(x, chart.chartArea.bottom);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'red';
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
 const detailCtx = document.getElementById('detailChart').getContext('2d');
 let detailChart = new Chart(detailCtx, {
   type: 'line',
@@ -198,13 +309,15 @@ let detailChart = new Chart(detailCtx, {
       legend: { display: true, labels: { usePointStyle: true, pointStyle: 'line' } }
     },
     scales: {
-      x: { title: { display: true, text: 'Distance (km)' }, ticks: { callback: value => Number(value).toFixed(2) } },
+      x: { type: 'linear', title: { display: true, text: 'Distance (km)' } },
       y: { title: { display: true, text: 'Speed (km/h)' } },
       y1: { title: { display: true, text: 'Elevation (m)' }, position: 'right', grid: { drawOnChartArea: false } },
       y2: { title: { display: true, text: 'Heart Rate (bpm)' } }
     }
-  }
+  },
+  plugins: [verticalLinePlugin, detailAnnotationsPlugin]
 });
+
 
 // --- Hover → vertical line & map marker ---
 document.getElementById('detailChart').addEventListener('mousemove', evt => {
