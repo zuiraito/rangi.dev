@@ -286,7 +286,7 @@ let scatterChart = new Chart(scatterCtx, {
       if (!p || !p.track) return;
 
       // Reset style for all layers to blue
-      trackLayers.forEach(layer => layer.setStyle({ color: "blue", weight: 3 }));
+      trackLayers.forEach(layer => layer.setStyle({ color: "blue", weight: 3, opacity: 0.4 }));
 
       // Highlight clicked layer (we stored the layer reference on the point)
       if (p.layer) {
