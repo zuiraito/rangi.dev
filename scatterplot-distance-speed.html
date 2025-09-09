@@ -254,8 +254,18 @@ let scatterChart = new Chart(scatterCtx, {
   type: 'scatter',
   data: { datasets: [{ label: 'Activities', data: [], backgroundColor: [] }] },
   options: {
+
     scales: {
-      x: { type: 'logarithmic', title: { display: true, text: 'Distance (km, log)' } },
+      x: {
+    type: 'logarithmic',
+    title: { display: true, text: 'Distance (km, log)' },
+    ticks: {
+      callback: (val) => {
+        const num = Number(val);
+        return Number.isInteger(num) ? num.toString() : num.toString();
+      }
+    }
+  },
       y: { title: { display: true, text: 'Avg Moving Speed (km/h)' } }
     },
     plugins: {
