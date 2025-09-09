@@ -4,6 +4,9 @@
   <meta charset="utf-8" />
   <title>Activity Scatter Plot + Map</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
+
 	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
@@ -11,7 +14,7 @@
 <script src="https://unpkg.com/leaflet.fullscreen/Control.FullScreen.js"></script>
 
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 2rem; }
+    body { font-family: sans-serif; margin: auto; padding: 2rem; max-width: 1400px}
     #drop-area {
       width: 100%; height: 150px; border: 2px dashed #aaa;
       display: flex; align-items: center; justify-content: center;
@@ -21,7 +24,7 @@
     }
     #drop-area:hover { background: #f9f9f9; }
     #fileInput { display: none; }
-    #map { width: 100%; height: 400px; margin-top: 20px; }
+    #map { width: 100%; height: 600px; margin-top: 20px; }
     #detailChart { margin-top: 20px; }
     button { padding: 1px 5px; font-size: 14px; cursor: pointer; }
   </style>
@@ -34,13 +37,16 @@
   <input type="file" id="fileInput" multiple accept=".tcx,.gpx">
 </div>
 <p>.fit files can be converted to .txc using this <a href="https://github.com/zuiraito/rangi.dev/blob/main/convert_fit_to_gpx.sh">script</a>.</p>
-<h2>Activity Heatmap</h2>
-<div id="activityHeatmap" style="display: grid; grid-template-columns: repeat(52, 12px); gap: 2px;"></div>
-
-
+<br><br>
 <canvas id="scatterChart" width="900" height="500"></canvas>
-<div id="map"></div>
+<br><br>
 <canvas id="detailChart" width="900" height="400"></canvas>
+<button id="zoomIn">+</button>
+<button id="zoomOut">-</button>
+<button id="resetZoom">Reset Zoom</button>
+<div id="map"></div>
+<br><br>
+<canvas id="timeChart" width="900" height="400"></canvas>
 
 <script>
 // --- Map setup ---
@@ -83,9 +89,58 @@ const baseMaps = {
   "Esri Satellite": esriSat
 };
 L.control.layers(baseMaps).addTo(map);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 let trackLayers = [];   // keep references to every polyline (all blue by default)
 let hoverMarker = null;
+
+let dragStartIndex = null;
+let dragEndIndex = null;
+function zoomChart(chart, factor) {
+  const scale = chart.scales.x;
+  let min = scale.min !== null ? scale.min : scale._userMin ?? scale.min;
+  let max = scale.max !== null ? scale.max : scale._userMax ?? scale.max;
+
+  // Fallback if auto scale
+  if (min === null || max === null) {
+    min = scale.min;
+    max = scale.max;
+  }
+
+  const range = max - min;
+  const center = (max + min) / 2;
+  const newRange = range * factor;
+
+  chart.options.scales.x.min = center - newRange / 2;
+  chart.options.scales.x.max = center + newRange / 2;
+  chart.update();
+}
+
+document.getElementById('zoomIn').addEventListener('click', () => {
+  [detailChart, timeChart].forEach(c => zoomChart(c, 0.8)); // zoom in (20%)
+});
+
+document.getElementById('zoomOut').addEventListener('click', () => {
+  [detailChart, timeChart].forEach(c => zoomChart(c, 1.25)); // zoom out (25%)
+});
+document.getElementById('resetZoom').addEventListener('click', () => {
+  [detailChart, timeChart].forEach(c => {
+    c.options.scales.x.min = null;
+    c.options.scales.x.max = null;
+    c.options.scales.y.min = null;
+    c.options.scales.y.max = null;
+    c.update();
+  });
+	// zoom out to show selected track
+  if (activeScatterIndex != null) {
+    const selectedPoint = scatterChart.data.datasets[0].data[activeScatterIndex];
+    if (selectedPoint && selectedPoint.track && selectedPoint.track.length) {
+			map.flyToBounds(selectedPoint.track, {
+  padding: [5, 5], // optional padding around the bounds
+  duration: .5      // seconds for animation
+});
+
+    }
+  }
+});
 
 // --- Haversine ---
 function haversine(lat1, lon1, lat2, lon2) {
@@ -147,16 +202,18 @@ function hrToColor(hr, minHR = 100, maxHR = 180) {
   }
 }
 
-// --- Detail chart plugins (vertical line + annotations) ---
+// --- Shared hover state ---
+let activeHoverIndex = null;
+
+// --- Vertical line plugin (for both charts) ---
 const verticalLinePlugin = {
   id: 'verticalLine',
   afterDatasetsDraw(chart) {
-    if (!chart.tooltip?.getActiveElements().length) return;
+    if (activeHoverIndex == null) return;
     const ctx = chart.ctx;
-    const activePoint = chart.tooltip.getActiveElements()[0];
-    const datasetIndex = activePoint.datasetIndex;
-    const index = activePoint.index;
-    const x = chart.scales.x.getPixelForValue(chart.data.datasets[datasetIndex].data[index].x);
+    const dataset = chart.data.datasets[0];
+    if (!dataset || !dataset.data || !dataset.data[activeHoverIndex]) return;
+    const x = chart.scales.x.getPixelForValue(dataset.data[activeHoverIndex].x);
 
     ctx.save();
     ctx.beginPath();
@@ -168,6 +225,55 @@ const verticalLinePlugin = {
     ctx.restore();
   }
 };
+// --- Hover function for charts ---
+function handleHover(evt, chart) {
+  if (activeScatterIndex == null) return;
+
+  const xScale = chart.scales.x;
+  // Get the X value at the mouse position
+  const xValue = xScale.getValueForPixel(evt.offsetX);
+
+  // Find the nearest point based on X only
+  const dataset = chart.data.datasets[0];
+  let closestIndex = 0;
+  let minDist = Infinity;
+  dataset.data.forEach((pt, i) => {
+    const dist = Math.abs(pt.x - xValue);
+    if (dist < minDist) {
+      minDist = dist;
+      closestIndex = i;
+    }
+  });
+
+  activeHoverIndex = closestIndex;
+
+  // Update map marker based on the closest X
+  const p = scatterChart.data.datasets[0].data[activeScatterIndex];
+  if (p && p.track) {
+    const trackPoint = p.track[activeHoverIndex] || p.track[p.track.length-1];
+    if (hoverMarker) hoverMarker.remove();
+    hoverMarker = L.circleMarker(trackPoint, { radius: 6, color: 'red', fill: true }).addTo(map);
+  }
+
+  detailChart.update('none');
+  timeChart.update('none');
+}
+
+// --- Add hover listeners ---
+document.getElementById('detailChart').addEventListener('mousemove', evt => handleHover(evt, detailChart));
+document.getElementById('timeChart').addEventListener('mousemove', evt => handleHover(evt, timeChart));
+document.getElementById('detailChart').addEventListener('mouseleave', () => {
+  activeHoverIndex = null;
+  if (hoverMarker) { hoverMarker.remove(); hoverMarker = null; }
+  detailChart.update('none');
+  timeChart.update('none');
+});
+document.getElementById('timeChart').addEventListener('mouseleave', () => {
+  activeHoverIndex = null;
+  if (hoverMarker) { hoverMarker.remove(); hoverMarker = null; }
+  detailChart.update('none');
+  timeChart.update('none');
+});
 
 const detailAnnotationsPlugin = {
   id: 'detailAnnotations',
@@ -225,7 +331,6 @@ const detailAnnotationsPlugin = {
     ctx.restore();
   }
 };
-
 // --- Detail chart (full config) ---
 const detailCtx = document.getElementById('detailChart').getContext('2d');
 let detailChart = new Chart(detailCtx, {
@@ -236,7 +341,7 @@ let detailChart = new Chart(detailCtx, {
     interaction: { mode: 'index', intersect: false },
     stacked: false,
     plugins: {
-      title: { display: true, text: 'Activity Details' },
+      title: { display: true, text: 'Distance Plot' },
       legend: { display: true, labels: { usePointStyle: true, pointStyle: 'line' } }
     },
     scales: {
@@ -248,6 +353,43 @@ let detailChart = new Chart(detailCtx, {
   },
   plugins: [verticalLinePlugin, detailAnnotationsPlugin]
 });
+
+// --- Time chart ---
+const timeCtx = document.getElementById('timeChart').getContext('2d');
+let timeChart = new Chart(timeCtx, {
+  type: 'line',
+  data: { labels: [], datasets: [] },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    stacked: false,
+    plugins: {
+      title: { display: true, text: 'Time Plot' },
+      legend: { display: true, labels: { usePointStyle: true, pointStyle: 'line' } }
+    },
+    scales: {
+			x: {
+  type: 'time',
+  time: {
+    unit: 'minute',
+    tooltipFormat: 'HH:mm:ss',      // tooltip uses 24h format
+    displayFormats: {
+      hour: 'HH:mm',                // axis labels for hours
+      minute: 'HH:mm'               // axis labels for minutes
+    }
+  },
+  title: { display: true, text: 'Time' }
+},
+      y: { title: { display: true, text: 'Speed (km/h)' } },
+      y1: { title: { display: true, text: 'Elevation (m)' }, position: 'right', grid: { drawOnChartArea: false } },
+      y2: { title: { display: true, text: 'Heart Rate (bpm)' } }
+    }
+  },
+
+  plugins: [verticalLinePlugin, detailAnnotationsPlugin]
+});
+
+
 
 // --- Scatter chart (overview) ---
 const scatterCtx = document.getElementById('scatterChart').getContext('2d');
@@ -298,6 +440,69 @@ scatterChart.data.datasets[0].pointBorderColor[clickedIndex] = "red";
 scatterChart.data.datasets[0].pointBorderWidth[clickedIndex] = 3;
 
 scatterChart.update();
+let chartDragStart = null;
+
+function getNearestIndexByX(chart, evt) {
+  const xScale = chart.scales.x;
+  const xValue = xScale.getValueForPixel(evt.offsetX);
+  const dataset = chart.data.datasets[0];
+
+  let closestIndex = 0;
+  let minDist = Infinity;
+  dataset.data.forEach((pt, i) => {
+    const dist = Math.abs(pt.x - xValue);
+    if (dist < minDist) {
+      minDist = dist;
+      closestIndex = i;
+    }
+  });
+  return closestIndex;
+}
+
+function handleChartDragStart(evt, chart) {
+  chartDragStart = getNearestIndexByX(chart, evt);
+}
+
+function handleChartDragEnd(evt, chart) {
+  if (chartDragStart == null) return;
+  const endIndex = getNearestIndexByX(chart, evt);
+
+  const start = Math.min(chartDragStart, endIndex);
+  const end = Math.max(chartDragStart, endIndex);
+
+  // --- Update both charts ---
+  [detailChart, timeChart].forEach(c => {
+    const subsetX = c.data.datasets[0].data.slice(start, end + 1).map(p => p.x);
+    c.options.scales.x.min = Math.min(...subsetX);
+    c.options.scales.x.max = Math.max(...subsetX);
+
+    const subsetY = c.data.datasets[0].data.slice(start, end + 1).map(p => p.y).filter(v => v != null);
+    if (subsetY.length > 0) {
+      c.options.scales.y.min = Math.min(...subsetY);
+      c.options.scales.y.max = Math.max(...subsetY);
+    }
+    c.update();
+  });
+
+  // --- Zoom map ---
+  if (activeScatterIndex != null) {
+    const track = scatterChart.data.datasets[0].data[activeScatterIndex].track;
+    if (track) {
+      const subsetTrack = track.slice(start, end + 1);
+      if (subsetTrack.length) map.fitBounds(subsetTrack);
+    }
+  }
+
+  chartDragStart = null;
+}
+
+
+			// Add listeners to both charts
+[detailChart, timeChart].forEach(chart => {
+  const canvas = chart.canvas;
+  canvas.addEventListener('mousedown', evt => handleChartDragStart(evt, chart));
+  canvas.addEventListener('mouseup', evt => handleChartDragEnd(evt, chart));
+});
 
 
       // Reset style for all layers to blue
@@ -310,7 +515,7 @@ scatterChart.update();
         map.fitBounds(p.layer.getBounds());
       }
 
-      document.getElementById("map").scrollIntoView({ behavior: "smooth" });
+      document.getElementById("detailChart").scrollIntoView({ behavior: "smooth" });
 
       // Build arrays for the detail chart (reuse the XML inside p.xml for accurate per-point values)
       const distArr = [], hrArr = [], speedArr = [], elevArr = [];
@@ -405,6 +610,72 @@ if (eleData.length > 0) {
 }
 
 detailChart.update();
+const timeArr = [];
+
+if (p.file.toLowerCase().endsWith(".tcx")) {
+  let lastTime = null;
+  p.xml.querySelectorAll("Trackpoint").forEach(tp => {
+    const timeEl = tp.querySelector("Time");
+    if (timeEl) {
+      const t = new Date(timeEl.textContent);
+      timeArr.push(t);
+    } else {
+      timeArr.push(null);
+    }
+  });
+} else if (p.file.toLowerCase().endsWith(".gpx")) {
+  p.xml.querySelectorAll("trkpt").forEach(pt => {
+    const timeEl = pt.querySelector("time");
+    timeArr.push(timeEl ? new Date(timeEl.textContent) : null);
+  });
+}
+
+timeChart.data.labels = timeArr;
+timeChart.data.datasets = [
+  {
+    label: 'Speed (km/h)',
+    data: timeArr.map((t,i)=>({ x: t, y: speedArr[i] })),
+    yAxisID: 'y',
+    borderColor: 'rgba(80,80,255,1)',
+    borderWidth: 1,
+    backgroundColor: 'rgba(80,80,255,0.5)',
+    fill: { target: { value: avgSpeed } },
+    pointRadius: 0
+  },
+  {
+    label: 'Heart Rate (bpm)',
+    data: timeArr.map((t,i)=>({ x: t, y: hrArr[i] })),
+    yAxisID: 'y2',
+    borderColor: 'rgba(255,80,80,1)',
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,80,80,0.5)',
+    fill: false,
+    pointRadius: 0,
+    hidden: true
+  },
+  {
+    label: 'Elevation (m)',
+    data: timeArr.map((t,i)=>({ x: t, y: elevArr[i] })),
+    yAxisID: 'y1',
+    borderColor: 'rgba(0,55,0,0.2)',
+    backgroundColor: 'rgba(0,80,0,0.5)',
+    fill: true,
+    pointRadius: 0
+  }
+];
+
+// Sync min/max elevation as for detail chart
+if (eleData.length > 0) {
+  let minEle = Math.min(...eleData) - 2;
+  let maxEle = Math.max(...eleData);
+  if (maxEle - minEle < 40) maxEle = minEle + 40;
+  timeChart.options.scales.y1.min = minEle;
+  timeChart.options.scales.y1.max = maxEle;
+}
+
+timeChart.update();
+
+
 
     }
   }
@@ -412,7 +683,8 @@ detailChart.update();
 
 // --- Hover → vertical line & map marker (on detail chart) ---
 document.getElementById('detailChart').addEventListener('mousemove', evt => {
-  const points = detailChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+  const points = detailChart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
+
   if (points.length && activeScatterIndex != null) {
     const idx = points[0].index;
     const p = scatterChart.data.datasets[0].data[activeScatterIndex];
@@ -425,6 +697,21 @@ document.getElementById('detailChart').addEventListener('mousemove', evt => {
     if (hoverMarker) { hoverMarker.remove(); hoverMarker = null; }
   }
 });
+document.getElementById('timeChart').addEventListener('mousemove', evt => {
+  const points = timeChart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
+  if (points.length && activeScatterIndex != null) {
+    const idx = points[0].index;
+    const p = scatterChart.data.datasets[0].data[activeScatterIndex];
+    if (p && p.track) {
+      const trackPoint = p.track[idx] || p.track[p.track.length-1];
+      if (hoverMarker) { hoverMarker.remove(); hoverMarker = null; }
+      hoverMarker = L.circleMarker(trackPoint, { radius: 6, color: 'red', fill: true }).addTo(map);
+    }
+  } else {
+    if (hoverMarker) { hoverMarker.remove(); hoverMarker = null; }
+  }
+});
+
 document.getElementById('detailChart').addEventListener('mouseleave', () => {
   if (hoverMarker) { hoverMarker.remove(); hoverMarker = null; }
 });
