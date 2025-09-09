@@ -34,6 +34,9 @@
   <input type="file" id="fileInput" multiple accept=".tcx,.gpx">
 </div>
 <p>.fit files can be converted to .txc using this <a href="https://github.com/zuiraito/rangi.dev/blob/main/convert_fit_to_gpx.sh">script</a>.</p>
+<h2>Activity Heatmap</h2>
+<div id="activityHeatmap" style="display: grid; grid-template-columns: repeat(52, 12px); gap: 2px;"></div>
+
 
 <canvas id="scatterChart" width="900" height="500"></canvas>
 <div id="map"></div>
@@ -375,17 +378,34 @@ scatterChart.update();
           pointRadius: 0,
           hidden: true
         },
-        {
-          label: 'Elevation (m)',
-          data: distArr.map((d, i) => ({ x: d, y: elevArr[i] })),
-          yAxisID: 'y1',
-          borderColor: 'rgba(0, 55, 0, 0.2)',
-          backgroundColor: 'rgba(0, 80, 0, 0.5)',
-          fill: true,
-          pointRadius: 0
-        }
+  {
+    label: 'Elevation (m)',
+    data: distArr.map((d, i) => ({ x: d, y: elevArr[i] })),
+    yAxisID: 'y1',
+    borderColor: 'rgba(0, 55, 0, 0.2)',
+    backgroundColor: 'rgba(0, 80, 0, 0.5)',
+    fill: true,
+    pointRadius: 0
+  }
       ];
-      detailChart.update();
+			// Compute min/max for elevation and enforce at least 20m range
+const eleData = elevArr.filter(v => v != null);
+if (eleData.length > 0) {
+  let minEle = Math.min(...eleData) - 2; // 2m below actual min
+  let maxEle = Math.max(...eleData);
+  const minRange = 40;
+
+  if (maxEle - minEle < minRange) {
+    // Expand the max to ensure at least 20m range
+    maxEle = minEle + minRange;
+  }
+
+  detailChart.options.scales.y1.min = minEle;
+  detailChart.options.scales.y1.max = maxEle;
+}
+
+detailChart.update();
+
     }
   }
 });
