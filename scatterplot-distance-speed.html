@@ -284,6 +284,18 @@ let scatterChart = new Chart(scatterCtx, {
       activeScatterIndex = clickedIndex;
       const p = scatterChart.data.datasets[0].data[clickedIndex];
       if (!p || !p.track) return;
+			// Reset style for all scatter points
+scatterChart.data.datasets[0].pointBorderColor =
+  scatterChart.data.datasets[0].data.map(() => "transparent");
+scatterChart.data.datasets[0].pointBorderWidth =
+  scatterChart.data.datasets[0].data.map(() => 0);
+
+// Highlight clicked point with red outline
+scatterChart.data.datasets[0].pointBorderColor[clickedIndex] = "red";
+scatterChart.data.datasets[0].pointBorderWidth[clickedIndex] = 3;
+
+scatterChart.update();
+
 
       // Reset style for all layers to blue
       trackLayers.forEach(layer => layer.setStyle({ color: "blue", weight: 3, opacity: 0.4 }));
