@@ -74,18 +74,11 @@ const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/
 const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
   attribution: 'Tiles © Esri'
 });
-// --- Add Stamen Watercolor ---
-const stamenWatercolor = L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.jpg', {
-  attribution: 'Map tiles by <a href="https://stamen.com/">Stamen Design</a>, ' +
-               '<a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  subdomains: 'abcd',
-  minZoom: 1,
-  maxZoom: 16
-});
 // --- White background layer ---
 const whiteBg = L.tileLayer('', {
   attribution: ''
 });
+
 
 // Initialize map with default layer
 const map = L.map('map', {
@@ -98,9 +91,8 @@ const baseMaps = {
   "Topo Map": topo,
   "Carto Light": cartoLight,
   "Carto Dark": cartoDark,
-  "Esri Satellite": esriSat
-  "Stamen Watercolor": stamenWatercolor,
-  "White Background": whiteBg   // 👈 new option
+  "Esri Satellite": esriSat,
+  "No Map": whiteBg,
 };
 L.control.layers(baseMaps).addTo(map);
 let trackLayers = [];   // keep references to every polyline (all blue by default)
