@@ -27,6 +27,31 @@
     #map { width: 100%; height: 600px; margin-top: 20px; }
     #detailChart { margin-top: 20px; }
     button { padding: 1px 5px; font-size: 14px; cursor: pointer; }
+		#activityTable th {
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+}
+
+#activityTable th:hover {
+  background-color: #f2f2f2;
+}
+
+#activityTable th.sorted-asc::after {
+  content: " ▲";
+  position: absolute;
+  right: 8px;
+}
+
+#activityTable th.sorted-desc::after {
+  content: " ▼";
+  position: absolute;
+  right: 8px;
+}
+	.highlighted-row {
+  background-color: #ffe5e5;
+}
+
   </style>
 </head>
 <body>
@@ -47,6 +72,48 @@
 <div id="map"></div>
 <br><br>
 <canvas id="timeChart" width="900" height="400"></canvas>
+<h2>Uploaded Activities</h2>
+
+<div style="margin-bottom: 1em;">
+  <label>
+    Date from:
+    <input type="date" id="dateMin">
+  </label>
+  <label>
+    to:
+    <input type="date" id="dateMax">
+  </label>
+  <label style="margin-left: 2em;">
+    Distance from (km):
+    <input type="number" id="distMin" step="0.1">
+  </label>
+  <label>
+    to:
+    <input type="number" id="distMax" step="0.1">
+  </label>
+  <button onclick="filterTable()">Apply</button>
+  <button onclick="resetFilters()">Reset</button>
+</div>
+
+<table id="activityTable" border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; text-align: left; cursor: pointer;">
+  <thead>
+    <tr>
+      <th onclick="sortTable(0)">Name</th>
+      <th onclick="sortTable(1)">Date</th>
+      <th onclick="sortTable(2)">Distance (km)</th>
+      <th onclick="sortTable(3)">Time</th>
+      <th onclick="sortTable(4)">Avg Speed (km/h)</th>
+      <th onclick="sortTable(5)">Max Speed (km/h)</th>
+      <th onclick="sortTable(6)">Avg HR</th>
+      <th onclick="sortTable(7)">Max HR</th>
+    	<th onclick="sortTable(8)">Total Ascent (m)</th>
+    	<th onclick="sortTable(9)">Total Descent (m)</th>
+      <th>View</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
 
 <script>
 // --- Map setup ---
@@ -679,6 +746,17 @@ if (eleData.length > 0) {
   timeChart.options.scales.y1.max = maxEle;
 }
 
+// Highlight clicked layer (track) and row
+if (p.layer) {
+  p.layer.setStyle({ color: "red", weight: 3, opacity: 1 });
+  p.layer.bringToFront();
+  map.fitBounds(p.layer.getBounds());
+}
+
+// Highlight the corresponding table row
+highlightRow(p.file);
+
+
 timeChart.update();
 
 
@@ -735,33 +813,83 @@ function handleFiles(files) {
         return;
       }
 
-      let distanceKm = null, avgMovingSpeed = null, hr = null, track = [];
+      let distanceKm = null, avgMovingSpeed = null, hr = null, maxSpeed = null, track = [];
 
-      if (file.name.toLowerCase().endsWith(".tcx")) {
-        const distanceEl = xml.querySelector("DistanceMeters");
-        distanceKm = distanceEl ? parseFloat(distanceEl.textContent)/1000 : null;
-        avgMovingSpeed = averageMovingSpeedTcx(xml);
-        const hrEl = xml.querySelector("AverageHeartRateBpm Value");
-        hr = hrEl ? parseFloat(hrEl.textContent) : null;
-        xml.querySelectorAll("Trackpoint").forEach(tp => {
-          const latEl = tp.querySelector("LatitudeDegrees");
-          const lonEl = tp.querySelector("LongitudeDegrees");
-          if (latEl && lonEl) track.push([parseFloat(latEl.textContent), parseFloat(lonEl.textContent)]);
-        });
-      } else if (file.name.toLowerCase().endsWith(".gpx")) {
-        let totalDist = 0, last = null;
-        xml.querySelectorAll("trkpt").forEach(pt => {
-          const lat = parseFloat(pt.getAttribute("lat"));
-          const lon = parseFloat(pt.getAttribute("lon"));
-          if (!isNaN(lat) && !isNaN(lon)) {
-            track.push([lat, lon]);
-            if (last) totalDist += haversine(lat, lon, last.lat, last.lon);
-            last = { lat, lon };
-          }
-        });
-        distanceKm = totalDist/1000;
-        avgMovingSpeed = averageMovingSpeedGpx(xml);
+
+if (file.name.toLowerCase().endsWith(".tcx")) {
+  const distanceEl = xml.querySelector("DistanceMeters");
+  distanceKm = distanceEl ? parseFloat(distanceEl.textContent)/1000 : null;
+  avgMovingSpeed = averageMovingSpeedTcx(xml);
+
+  const hrEl = xml.querySelector("AverageHeartRateBpm Value");
+  hr = hrEl ? parseFloat(hrEl.textContent) : null;
+
+  xml.querySelectorAll("Trackpoint").forEach(tp => {
+    const latEl = tp.querySelector("LatitudeDegrees");
+    const lonEl = tp.querySelector("LongitudeDegrees");
+    const spdEl = tp.querySelector("Extensions TPX Speed");
+
+    if (latEl && lonEl) {
+      track.push([parseFloat(latEl.textContent), parseFloat(lonEl.textContent)]);
+    }
+
+    if (spdEl) {
+      const s = parseFloat(spdEl.textContent) * 3.6; // convert to km/h
+      if (!isNaN(s)) {
+        if (maxSpeed === null || s > maxSpeed) maxSpeed = s;
       }
+    }
+  });
+} else if (file.name.toLowerCase().endsWith(".gpx")) {
+  let totalDist = 0, last = null;
+  xml.querySelectorAll("trkpt").forEach(pt => {
+    const lat = parseFloat(pt.getAttribute("lat"));
+    const lon = parseFloat(pt.getAttribute("lon"));
+    if (!isNaN(lat) && !isNaN(lon)) {
+      track.push([lat, lon]);
+      if (last) totalDist += haversine(lat, lon, last.lat, last.lon);
+      last = { lat, lon };
+    }
+  });
+  distanceKm = totalDist/1000;
+  avgMovingSpeed = averageMovingSpeedGpx(xml);
+  // GPX usually doesn’t have per-point speed, so leave maxSpeed = null
+}
+let totalAscent = 0;
+let totalDescent = 0;
+let lastEle = null;
+
+xml.querySelectorAll("trkpt, Trackpoint").forEach(pt => {
+  const eleEl = pt.querySelector("ele") || pt.querySelector("AltitudeMeters");
+  if (eleEl) {
+    const ele = parseFloat(eleEl.textContent);
+    if (!isNaN(ele)) {
+      if (lastEle !== null) {
+        const diff = ele - lastEle;
+        if (diff > 0) totalAscent += diff;
+        else totalDescent += Math.abs(diff);
+      }
+      lastEle = ele;
+    }
+  }
+});
+
+
+// save it in your scatter point
+const point = {
+  x: distanceKm,
+  y: avgMovingSpeed,
+  hr,
+  file: file.name,
+  track,
+  xml,
+  layer: null,
+  maxSpeed,
+  totalAscent,
+  totalDescent
+};
+;
+
 
       if (distanceKm && avgMovingSpeed) {
         const color = hrToColor(hr);
@@ -791,10 +919,91 @@ layer.on("click", () => {
 });
 
       }
+// --- Extract stats for the table ---
+let date = null, duration = null, avgHR = null, maxHR = null;
+
+// Try to extract time/date
+if (file.name.toLowerCase().endsWith(".tcx")) {
+  const startTimeEl = xml.querySelector("Id, Time");
+  if (startTimeEl) date = new Date(startTimeEl.textContent);
+  const totalTimeEl = xml.querySelector("TotalTimeSeconds");
+  if (totalTimeEl) duration = parseFloat(totalTimeEl.textContent);
+  const avgHrEl = xml.querySelector("AverageHeartRateBpm Value");
+  if (avgHrEl) avgHR = parseFloat(avgHrEl.textContent);
+  const maxHrEl = xml.querySelector("MaximumHeartRateBpm Value");
+  if (maxHrEl) maxHR = parseFloat(maxHrEl.textContent);
+  const maxSpdEl = xml.querySelector("MaximumSpeed");
+  if (maxSpdEl) maxSpeed = parseFloat(maxSpdEl.textContent) * 3.6;
+} else if (file.name.toLowerCase().endsWith(".gpx")) {
+  const firstPt = xml.querySelector("trkpt time");
+  if (firstPt) date = new Date(firstPt.textContent);
+  // You could calculate duration by last - first timestamp
+  const times = [...xml.querySelectorAll("trkpt time")].map(t=>new Date(t.textContent).getTime());
+  if (times.length > 1) duration = (Math.max(...times)-Math.min(...times))/1000;
+  // HR and max speed usually missing in GPX, leave null
+}
+
+// Format time hh:mm:ss
+function formatDuration(sec) {
+  if (!sec) return "n/a";
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  const s = Math.floor(sec%60);
+  return [h,m,s].map(v=>String(v).padStart(2,"0")).join(":");
+}
+
+// Add row to table
+const tbody = document.querySelector("#activityTable tbody");
+const tr = document.createElement("tr");
+tr.innerHTML = `
+  <td>${file.name}</td>
+  <td>${date ? date.toLocaleString() : "n/a"}</td>
+  <td>${distanceKm.toFixed(2)}</td>
+  <td>${formatDuration(duration)}</td>
+  <td>${avgMovingSpeed?.toFixed(1) ?? "n/a"}</td>
+	<td>${point.maxSpeed ? point.maxSpeed.toFixed(1) : "n/a"}</td>
+  <td>${avgHR ?? "n/a"}</td>
+  <td>${maxHR ?? "n/a"}</td>
+  <td>${point.totalAscent.toFixed(0)}</td>
+  <td>${point.totalDescent.toFixed(0)}</td>
+
+  <td><button onclick="viewActivity('${file.name}')">View</button></td>
+`;
+tbody.appendChild(tr);
+
+// Store a mapping for "view" button
+if (!window.activityMap) window.activityMap = {};
+window.activityMap[file.name] = scatterChart.data.datasets[0].data[scatterChart.data.datasets[0].data.length-1];
+
     };
+
     reader.readAsText(file);
   }
 }
+let highlightedRow = null;
+function highlightRow(filename) {
+  const tbody = document.querySelector("#activityTable tbody");
+  for (let row of tbody.rows) {
+    if (row.cells[0].innerText === filename) {
+      row.classList.add("highlighted-row");
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      row.classList.remove("highlighted-row");
+    }
+  }
+}
+
+function viewActivity(filename) {
+  const point = window.activityMap[filename];
+  if (!point) return;
+  const idx = scatterChart.data.datasets[0].data.indexOf(point);
+  if (idx !== -1) {
+    scatterChart.options.onClick(null, [{ datasetIndex: 0, index: idx }]);
+    highlightRow(filename); // <-- Highlight row here too
+    document.getElementById("detailChart").scrollIntoView({ behavior: "smooth" });
+  }
+}
+
 
 // Drag & drop + manual upload handling
 const dropArea = document.getElementById('drop-area');
@@ -805,6 +1014,87 @@ const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
 uploadBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+// Table logic
+let sortDirection = {}; // remember direction per column
+function sortTable(colIndex) {
+  const table = document.getElementById("activityTable");
+  const tbody = table.tBodies[0];
+  const rows = Array.from(tbody.rows);
+
+  const ths = table.tHead.rows[0].cells;
+
+  // Reset old arrows
+  for (let th of ths) th.classList.remove("sorted-asc", "sorted-desc");
+
+  const dir = sortDirection[colIndex] === "asc" ? "desc" : "asc";
+  sortDirection[colIndex] = dir;
+
+rows.sort((a, b) => {
+  let A = a.cells[colIndex].innerText.trim();
+  let B = b.cells[colIndex].innerText.trim();
+
+  // Convert to number if possible
+  const numA = parseFloat(A.replace(",", "."));
+  const numB = parseFloat(B.replace(",", "."));
+
+  // Determine if values are numbers or n/a
+  const isNumA = !isNaN(numA);
+  const isNumB = !isNaN(numB);
+
+  if (isNumA && isNumB) {
+    return dir === "asc" ? numA - numB : numB - numA;
+  } else if (!isNumA && A === "n/a") {
+    // Put n/a at bottom
+    return dir === "asc" ? 1 : 1;
+  } else if (!isNumB && B === "n/a") {
+    return dir === "asc" ? -1 : -1;
+  } else {
+    // fallback to string compare
+    return dir === "asc" ? A.localeCompare(B) : B.localeCompare(A);
+  }
+});
+
+
+  rows.forEach(r => tbody.appendChild(r));
+
+  // Add arrow to current column
+  ths[colIndex].classList.add(dir === "asc" ? "sorted-asc" : "sorted-desc");
+}
+
+function filterTable() {
+  const dateMin = document.getElementById("dateMin").value ? new Date(document.getElementById("dateMin").value) : null;
+  const dateMax = document.getElementById("dateMax").value ? new Date(document.getElementById("dateMax").value) : null;
+  const distMin = parseFloat(document.getElementById("distMin").value);
+  const distMax = parseFloat(document.getElementById("distMax").value);
+
+  const tbody = document.querySelector("#activityTable tbody");
+  for (let row of tbody.rows) {
+    const dateText = row.cells[1].innerText.trim();
+    const distText = row.cells[2].innerText.trim();
+
+    const date = Date.parse(dateText) ? new Date(dateText) : null;
+    const dist = parseFloat(distText);
+
+    let visible = true;
+
+    if (dateMin && date && date < dateMin) visible = false;
+    if (dateMax && date && date > dateMax) visible = false;
+    if (!isNaN(distMin) && !isNaN(dist) && dist < distMin) visible = false;
+    if (!isNaN(distMax) && !isNaN(dist) && dist > distMax) visible = false;
+
+    row.style.display = visible ? "" : "none";
+  }
+}
+
+function resetFilters() {
+  document.getElementById("dateMin").value = "";
+  document.getElementById("dateMax").value = "";
+  document.getElementById("distMin").value = "";
+  document.getElementById("distMax").value = "";
+  filterTable();
+}
+
 </script>
 </body>
 </html>
