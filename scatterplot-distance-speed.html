@@ -986,7 +986,8 @@ function highlightRow(filename) {
   for (let row of tbody.rows) {
     if (row.cells[0].innerText === filename) {
       row.classList.add("highlighted-row");
-      row.scrollIntoView({ behavior: "smooth", block: "center" });
+
+   //   row.scrollIntoView({ behavior: "smooth", block: "center" });  // scroll down to the selected row of the table
     } else {
       row.classList.remove("highlighted-row");
     }
