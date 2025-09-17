@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Multi Sine — numbered</title>
+<title>Multi Sine — numbered with Oscilloscope</title>
 <style>
   body {font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 1.5rem;}
   .row {margin: .5rem 0;}
@@ -10,6 +10,7 @@
   input[type="number"]{width:6rem}
   input[type="range"]{width:8rem}
   button {cursor: pointer;}
+  canvas {border:1px solid #ddd; display:block; width:100%; height:150px; margin-top:1rem;}
 </style>
 </head>
 <body>
@@ -27,13 +28,36 @@
 
   <div id="oscillators"></div>
 
+  <!-- Oscilloscope canvas -->
+	<div class="row">
+  <label>Oscilloscope cycles:
+    <input id="scopeCycles" type="range" min="1" max="10" step="1" value="3">
+    <span id="scopeCyclesValue">3</span>
+  </label>
+</div>
+
+  <canvas id="oscilloscope"></canvas>
+
 <script>
+	const scopeCyclesSlider = document.getElementById('scopeCycles');
+let scopeCycles = parseInt(scopeCyclesSlider.value, 10);
+
+scopeCyclesSlider.addEventListener('input', () => {
+  scopeCycles = parseInt(scopeCyclesSlider.value, 10);
+  document.getElementById('scopeCyclesValue').textContent = scopeCycles;
+});
+
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   const audioCtx = new AudioCtx();
 
   const masterGain = audioCtx.createGain();
   masterGain.gain.value = parseFloat(document.getElementById('masterVol').value);
-  masterGain.connect(audioCtx.destination);
+
+  // Analyser for oscilloscope
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  masterGain.connect(analyser);
+  analyser.connect(audioCtx.destination);
 
   document.getElementById('masterVol').addEventListener('input', (e) => {
     masterGain.gain.setTargetAtTime(parseFloat(e.target.value), audioCtx.currentTime, 0.01);
@@ -69,7 +93,7 @@
     label.textContent = `Osc: ${oscCount}`;
     container.appendChild(label);
 
-    // Pause/Resume checkmark
+    // Pause/Resume button
     const pauseBtn = document.createElement('button');
     pauseBtn.textContent = '✓';
     pauseBtn.style.fontSize = '1.2em';
@@ -78,7 +102,7 @@
         entry.gain.gain.cancelScheduledValues(audioCtx.currentTime);
         entry.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.01);
         entry.paused = true;
-        pauseBtn.style.opacity = 0.3; // faded when muted
+        pauseBtn.style.opacity = 0.3;
       } else {
         entry.gain.gain.cancelScheduledValues(audioCtx.currentTime);
         entry.gain.gain.setTargetAtTime(parseFloat(vol.value), audioCtx.currentTime, 0.01);
@@ -92,25 +116,30 @@
     const vol = document.createElement('input');
     vol.type = 'range';
     vol.min = 0; vol.max = 1; vol.step = 0.01; vol.value = 0.3;
-    vol.addEventListener('input', () => {
-      entry.gain.gain.cancelScheduledValues(audioCtx.currentTime);
-      if (!entry.paused) {
-        entry.gain.gain.setTargetAtTime(parseFloat(vol.value), audioCtx.currentTime, 0.01);
-      }
-    });
+		vol.addEventListener('input', () => {
+		  entry.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+		  const v = parseFloat(vol.value);
+		  if (!entry.paused) {
+		    entry.gain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+		  }
+		  entry.gainValue = v; // store value for oscilloscope
+		});
+
     container.appendChild(vol);
 
-    // Frequency input (still editable if needed)
+    // Frequency input
     const freqInput = document.createElement('input');
     freqInput.type = 'number';
     freqInput.value = entry.freq;
     freqInput.step = '0.01';
-    freqInput.addEventListener('input', () => {
-      const f = parseFloat(freqInput.value);
-      if (!isNaN(f) && f > 0) {
-        entry.osc.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.01);
-      }
-    });
+		freqInput.addEventListener('input', () => {
+		 const f = parseFloat(freqInput.value);
+		  if (!isNaN(f) && f > 0) {
+		    entry.osc.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.01);
+		    entry.freq = f; // update stored value for oscilloscope
+		  }
+		});
+
     container.appendChild(freqInput);
 
     // Stop button
@@ -143,6 +172,67 @@
     oscillators.length = 0;
     document.getElementById('oscillators').innerHTML = '';
   });
+
+  // Oscilloscope drawing
+  const canvas = document.getElementById('oscilloscope');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  const bufferLength = analyser.fftSize;
+  const dataArray = new Uint8Array(bufferLength);
+
+	function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function lcm(a, b) { return a * b / gcd(a, b); }
+
+	// Get approximate display period (in seconds) where all sine waves align at zero
+	// Calculate a display period based on the lowest frequency
+	function getDisplayPeriod(oscillators) {
+  if (oscillators.length === 0) return 1;
+  let minFreq = Math.min(...oscillators.map(o => o.freq));
+  return scopeCycles / minFreq; // display the number of cycles from slider
+}
+
+
+
+	function draw() {
+  requestAnimationFrame(draw);
+
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (oscillators.length === 0) return;
+
+  const T = getDisplayPeriod(oscillators); // horizontal axis in seconds
+  const sampleCount = canvas.width;        // one pixel per sample
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'black';
+  ctx.beginPath();
+
+  for (let i = 0; i < sampleCount; i++) {
+    const t = (i / sampleCount) * T; // map pixel to time
+    let yVal = 0;
+
+    for (let osc of oscillators) {
+      if (!osc.paused) yVal += Math.sin(2 * Math.PI * osc.freq * t) * osc.gain.gain.value;
+    }
+
+    const y = canvas.height / 2 - yVal * (canvas.height / 2); // invert for canvas
+    if (i === 0) ctx.moveTo(i, y);
+    else ctx.lineTo(i, y);
+  }
+
+  ctx.stroke();
+}
+
+
+  draw();
 </script>
 </body>
 </html>
