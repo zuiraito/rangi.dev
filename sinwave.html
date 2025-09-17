@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Multi Sine — numbered with Oscilloscope</title>
+<title>Multi Sine Oscilloscope</title>
 <style>
   body {font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 1.5rem;}
   .row {margin: .5rem 0;}
@@ -14,7 +14,23 @@
 </style>
 </head>
 <body>
-  <h2>Multi Sine</h2>
+  <h2>Multi Sine Oscilloscope</h2>
+	<div id="audioOverlay" style="
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: red;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  padding: 0.5rem;
+  display: none;
+  z-index: 1000;
+">
+  Click on the screen to enable audio
+</div>
+
 
   <div class="row">
     <label>Frequency (Hz): <input id="freq" type="number" value="440" min="20" max="20000" step="0.01"></label>
@@ -31,24 +47,77 @@
   <!-- Oscilloscope canvas -->
 	<div class="row">
   <label>Oscilloscope cycles:
-    <input id="scopeCycles" type="range" min="1" max="10" step="1" value="3">
-    <span id="scopeCyclesValue">3</span>
+    <input id="scopeCycles" type="number" min="1" max="1000" step="1" value="3">
+    <span id="scopeCyclesValue"></span>
   </label>
 </div>
 
   <canvas id="oscilloscope"></canvas>
 
 <script>
+// Load values from url
+window.addEventListener('DOMContentLoaded', () => {
+  const url = new URL(window.location);
+
+  // restore scope cycles
+  const scopeParam = url.searchParams.get("scope");
+  if (scopeParam) {
+    scopeCycles = parseInt(scopeParam, 10);
+    scopeCyclesSlider.value = scopeCycles;
+    document.getElementById('scopeCyclesValue').textContent = scopeCycles;
+  }
+
+  // restore oscillators
+  const param = url.searchParams.get("freqs");
+  if (param) {
+    const freqs = param.split(",").map(f => parseFloat(f));
+    freqs.forEach(f => {
+      if (!isNaN(f) && f > 0) addOscillator(f);
+    });
+  }
+});
+
+function updateURL() {
+  const freqs = oscillators.map(o => o.freq.toFixed(2));
+  const url = new URL(window.location);
+  url.searchParams.set("freqs", freqs.join(","));
+  url.searchParams.set("scope", scopeCycles); // <-- new
+  window.history.replaceState({}, "", url);
+}
+
+
 	const scopeCyclesSlider = document.getElementById('scopeCycles');
 let scopeCycles = parseInt(scopeCyclesSlider.value, 10);
 
 scopeCyclesSlider.addEventListener('input', () => {
   scopeCycles = parseInt(scopeCyclesSlider.value, 10);
   document.getElementById('scopeCyclesValue').textContent = scopeCycles;
+	updateURL();
 });
 
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  const audioCtx = new AudioCtx();
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioCtx();
+
+const overlay = document.getElementById("audioOverlay");
+
+function tryResume() {
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume().then(() => {
+      if (audioCtx.state === "running") {
+        overlay.style.display = "none";
+      }
+    });
+  }
+}
+
+if (audioCtx.state === "suspended") {
+  overlay.style.display = "block";
+}
+
+// listen for first user action
+["click", "keydown"].forEach(evt => {
+  document.body.addEventListener(evt, tryResume);
+});
 
   const masterGain = audioCtx.createGain();
   masterGain.gain.value = parseFloat(document.getElementById('masterVol').value);
@@ -138,6 +207,7 @@ scopeCyclesSlider.addEventListener('input', () => {
 		    entry.osc.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.01);
 		    entry.freq = f; // update stored value for oscilloscope
 		  }
+			updateURL();
 		});
 
     container.appendChild(freqInput);
@@ -152,10 +222,12 @@ scopeCyclesSlider.addEventListener('input', () => {
       const i = oscillators.indexOf(entry);
       if (i >= 0) oscillators.splice(i, 1);
       container.remove();
+			updateURL();
     });
     container.appendChild(stopBtn);
 
     document.getElementById('oscillators').appendChild(container);
+		updateURL();
   }
 
   document.getElementById('add').addEventListener('click', () => {
