@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Multi Sine — numbered</title>
+<style>
+  body {font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 1.5rem;}
+  .row {margin: .5rem 0;}
+  .osc {border:1px solid #ddd;padding:.6rem;margin:.5rem 0;border-radius:6px;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;}
+  input[type="number"]{width:6rem}
+  input[type="range"]{width:8rem}
+  button {cursor: pointer;}
+</style>
+</head>
+<body>
+  <h2>Multi Sine</h2>
+
+  <div class="row">
+    <label>Frequency (Hz): <input id="freq" type="number" value="440" min="20" max="20000" step="0.01"></label>
+    <button id="add">Add Oscillator</button>
+    <button id="stopAll">Stop All</button>
+  </div>
+
+  <div class="row">
+    <label>Master volume: <input id="masterVol" type="range" min="0" max="1" step="0.01" value="0.6"></label>
+  </div>
+
+  <div id="oscillators"></div>
+
+<script>
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audioCtx = new AudioCtx();
+
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = parseFloat(document.getElementById('masterVol').value);
+  masterGain.connect(audioCtx.destination);
+
+  document.getElementById('masterVol').addEventListener('input', (e) => {
+    masterGain.gain.setTargetAtTime(parseFloat(e.target.value), audioCtx.currentTime, 0.01);
+  });
+
+  const oscillators = [];
+  let oscCount = 0;
+
+  function createOscillator(freq) {
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start();
+
+    return { osc, gain, freq, paused: false };
+  }
+
+  function addOscillator(freq) {
+    const entry = createOscillator(freq);
+    oscillators.push(entry);
+    oscCount++;
+
+    const container = document.createElement('div');
+    container.className = 'osc';
+
+    const label = document.createElement('div');
+    label.textContent = `Osc: ${oscCount}`;
+    container.appendChild(label);
+
+    // Pause/Resume checkmark
+    const pauseBtn = document.createElement('button');
+    pauseBtn.textContent = '✓';
+    pauseBtn.style.fontSize = '1.2em';
+    pauseBtn.addEventListener('click', () => {
+      if (!entry.paused) {
+        entry.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+        entry.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.01);
+        entry.paused = true;
+        pauseBtn.style.opacity = 0.3; // faded when muted
+      } else {
+        entry.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+        entry.gain.gain.setTargetAtTime(parseFloat(vol.value), audioCtx.currentTime, 0.01);
+        entry.paused = false;
+        pauseBtn.style.opacity = 1;
+      }
+    });
+    container.appendChild(pauseBtn);
+
+    // Per-osc volume slider
+    const vol = document.createElement('input');
+    vol.type = 'range';
+    vol.min = 0; vol.max = 1; vol.step = 0.01; vol.value = 0.3;
+    vol.addEventListener('input', () => {
+      entry.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+      if (!entry.paused) {
+        entry.gain.gain.setTargetAtTime(parseFloat(vol.value), audioCtx.currentTime, 0.01);
+      }
+    });
+    container.appendChild(vol);
+
+    // Frequency input (still editable if needed)
+    const freqInput = document.createElement('input');
+    freqInput.type = 'number';
+    freqInput.value = entry.freq;
+    freqInput.step = '0.01';
+    freqInput.addEventListener('input', () => {
+      const f = parseFloat(freqInput.value);
+      if (!isNaN(f) && f > 0) {
+        entry.osc.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.01);
+      }
+    });
+    container.appendChild(freqInput);
+
+    // Stop button
+    const stopBtn = document.createElement('button');
+    stopBtn.textContent = 'Stop';
+    stopBtn.addEventListener('click', () => {
+      try { entry.osc.stop(); } catch (e) {}
+      entry.osc.disconnect();
+      entry.gain.disconnect();
+      const i = oscillators.indexOf(entry);
+      if (i >= 0) oscillators.splice(i, 1);
+      container.remove();
+    });
+    container.appendChild(stopBtn);
+
+    document.getElementById('oscillators').appendChild(container);
+  }
+
+  document.getElementById('add').addEventListener('click', () => {
+    const f = parseFloat(document.getElementById('freq').value);
+    if (!isNaN(f) && f > 0) addOscillator(f);
+  });
+
+  document.getElementById('stopAll').addEventListener('click', () => {
+    oscillators.slice().forEach(entry => {
+      try { entry.osc.stop(); } catch(e) {}
+      entry.osc.disconnect();
+      entry.gain.disconnect();
+    });
+    oscillators.length = 0;
+    document.getElementById('oscillators').innerHTML = '';
+  });
+</script>
+</body>
+</html>
+
