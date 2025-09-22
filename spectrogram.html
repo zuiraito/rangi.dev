@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Spectrogram with Top Peaks and Menu</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
+  canvas { display: block; }
+  #freqDisplay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #fff;
+    font-family: sans-serif;
+    font-size: 16px;
+    background: rgba(0,0,0,0.5);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  #menuToggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  #menu {
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+    width: 180px;
+  }
+  #menu label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<canvas id="spectrogram"></canvas>
+<div id="freqDisplay">Frequency: 0 Hz</div>
+<button id="menuToggle">☰ Menu</button>
+<div id="menu">
+  <label>
+    <span>Show Grid</span>
+    <input type="checkbox" id="toggleGrid" unchecked>
+  </label>
+  <label>
+    <span>Show Note Boxes</span>
+    <input type="checkbox" id="toggleBoxes" checked>
+  </label>
+  <label>
+    <span>Top Peaks</span>
+    <input type="number" id="numPeaks" value="5" min="1" max="10" style="width: 50px;">
+  </label>
+</div>
+
+<script>
+async function startSpectrogram() {
+  const canvas = document.getElementById('spectrogram');
+  const ctx = canvas.getContext('2d');
+  const freqDisplay = document.getElementById('freqDisplay');
+  const toggleGrid = document.getElementById('toggleGrid');
+  const toggleBoxes = document.getElementById('toggleBoxes');
+  const numPeaksInput = document.getElementById('numPeaks');
+
+  document.getElementById('menuToggle').addEventListener('click', () => {
+    const menu = document.getElementById('menu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  });
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const source = audioCtx.createMediaStreamSource(stream);
+
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 32768;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+  source.connect(analyser);
+
+  let mouseY = 0;
+  canvas.addEventListener('mousemove', e => mouseY = e.clientY);
+
+  const minFreq = 50;
+  const maxFreq = 2000;
+  const nyquist = audioCtx.sampleRate / 2;
+
+  const noteNames = ["A","A#","B","C","C#","D","D#","E","F","F#","G","G#"];
+  const notes = [];
+  for (let n = 0; n < 88; n++) { 
+    const freq = 27.5 * Math.pow(2, n / 12);
+    if (freq >= minFreq && freq <= maxFreq) {
+      const name = noteNames[n % 12];
+      notes.push({ freq, name });
+    }
+  }
+
+  function getColor(value) {
+    const t = value / 255;
+    if (t < 0.25) return `rgb(0,0,${Math.floor(255*t*4)})`;
+    else if (t < 0.5) return `rgb(0,${Math.floor(255*(t-0.25)*4)},255)`;
+    else if (t < 0.75) return `rgb(${Math.floor(255*(t-0.5)*4)},255,0)`;
+    else return `rgb(255,${Math.floor(255*(1-t)*4)},0)`;
+  }
+
+  function getBinForY(y) {
+    const logMin = Math.log10(minFreq);
+    const logMax = Math.log10(maxFreq);
+    const fraction = 1 - y / canvas.height;
+    const freq = Math.pow(10, logMin + fraction * (logMax - logMin));
+    return Math.min(bufferLength - 1, Math.max(0, freq / nyquist * bufferLength));
+  }
+
+  function getNoteForFreq(freq) {
+    const midi = Math.round(12 * Math.log2(freq / 440) + 72);
+    const note = noteNames[midi % 12];
+    const octave = Math.floor(midi / 12) - 1;
+    return `${note}${octave}`;
+  }
+
+  function draw() {
+    requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(dataArray);
+
+    // Shift canvas left
+    const oldData = ctx.getImageData(1, 0, canvas.width-1, canvas.height);
+    ctx.putImageData(oldData, 0, 0);
+
+    const peaks = [];
+
+    // Draw new column
+    for (let y = 0; y < canvas.height; y++) {
+      const bin = getBinForY(y);
+      const lower = Math.floor(bin);
+      const upper = Math.ceil(bin);
+      const weight = bin - lower;
+      const value = (dataArray[lower]*(1-weight) + dataArray[upper]*weight) || 0;
+
+      ctx.fillStyle = getColor(value);
+      ctx.fillRect(canvas.width-1, y, 1, 1);
+
+      if (value > 0) peaks.push({ value, bin });
+    }
+
+    // Sort and select top peaks
+    const numPeaks = Math.max(1, Math.min(10, parseInt(numPeaksInput.value)));
+    peaks.sort((a,b) => b.value - a.value);
+    const topPeaks = peaks.slice(0, numPeaks);
+
+    if (toggleBoxes.checked) {
+      topPeaks.forEach(peak => {
+        const peakFreq = peak.bin / bufferLength * nyquist;
+        const logMin = Math.log10(minFreq);
+        const logMax = Math.log10(maxFreq);
+        const peakY = canvas.height - ((Math.log10(peakFreq) - logMin) / (logMax - logMin)) * canvas.height;
+
+        // Marker
+        ctx.fillStyle = 'yellow';
+        ctx.beginPath();
+        ctx.arc(canvas.width-1, peakY, 4, 0, 2*Math.PI);
+        ctx.fill();
+
+        // Note label box
+        const peakNote = getNoteForFreq(peakFreq);
+        ctx.font = '14px sans-serif';
+        const textWidth = ctx.measureText(peakNote).width;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(canvas.width-1-textWidth-6, peakY-16, textWidth+4, 18);
+        ctx.fillStyle = 'black';
+        ctx.fillText(peakNote, canvas.width-1-textWidth-4, peakY-4);
+      });
+    }
+
+    // Draw horizontal grid if enabled
+    if (toggleGrid.checked) {
+      notes.forEach(note => {
+        const logMin = Math.log10(minFreq);
+        const logMax = Math.log10(maxFreq);
+        const y = canvas.height - ((Math.log10(note.freq) - logMin) / (logMax - logMin)) * canvas.height;
+        ctx.strokeStyle = note.name.includes("#") ? 'rgba(200,200,200,0.2)' : 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+
+        if (!note.name.includes("#")) {
+          ctx.fillStyle = 'white';
+          ctx.font = '12px sans-serif';
+          ctx.fillText(note.name, 5, y-2);
+        }
+      });
+    }
+
+    // Frequency at mouse
+    const freq = Math.pow(10, Math.log10(minFreq) + (1 - mouseY / canvas.height) * (Math.log10(maxFreq) - Math.log10(minFreq)));
+    freqDisplay.textContent = `Frequency: ${freq.toFixed(1)} Hz`;
+  }
+
+  draw();
+}
+
+startSpectrogram().catch(err => console.error(err));
+</script>
+</body>
+</html>
+

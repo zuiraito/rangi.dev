@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Audio to MIDI Visual Tool</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
+  canvas { display: block; }
+  #freqDisplay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #fff;
+    font-size: 16px;
+    background: rgba(0,0,0,0.5);
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  #menuToggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  #menu {
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+    width: 220px;
+  }
+  #menu label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
+</style>
+</head>
+<body>
+<canvas id="spectrogram"></canvas>
+<div id="freqDisplay">Frequency: 0 Hz</div>
+<button id="menuToggle">☰ Menu</button>
+<div id="menu">
+  <label><span>Show Grid</span><input type="checkbox" id="toggleGrid" checked></label>
+  <label><span>Show Notes</span><input type="checkbox" id="toggleBoxes" checked></label>
+  <label><span>Top Peaks</span><input type="number" id="numPeaks" value="5" min="1" max="10" style="width: 50px;"></label>
+  <label><span>Load Audio File</span><input type="file" id="fileInput" accept="audio/*"></label>
+</div>
+<div id="progressContainer" style="
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 12px;
+    background: rgba(255,255,255,0.1);
+    cursor: pointer;
+">
+  <div id="progressBar" style="
+      width: 0%;
+      height: 100%;
+      background: #4caf50;
+  "></div>
+</div>
+<
+
+
+<script>
+async function startAudioMidiVisualizer() {
+  const canvas = document.getElementById('spectrogram');
+  const ctx = canvas.getContext('2d');
+  const freqDisplay = document.getElementById('freqDisplay');
+  const toggleGrid = document.getElementById('toggleGrid');
+  const toggleBoxes = document.getElementById('toggleBoxes');
+  const numPeaksInput = document.getElementById('numPeaks');
+  const fileInput = document.getElementById('fileInput');
+
+  let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 32768;
+  let bufferLength = analyser.frequencyBinCount;
+  let dataArray = new Uint8Array(bufferLength);
+
+  let audioBuffer = null;
+  let audioSource = null;
+  let isPlaying = false;
+  let startTime = 0, pauseTime = 0;
+
+  // Resize canvas
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+
+  // Collapsible menu
+  document.getElementById('menuToggle').addEventListener('click', () => {
+    const menu = document.getElementById('menu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Piano notes mapping
+  const minFreq = 50, maxFreq = 2000;
+  const noteNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  function freqToMidi(freq) { return Math.round(12 * Math.log2(freq/440) + 72); }
+  function midiToNoteName(midi) { return noteNames[midi % 12] + Math.floor(midi / 12); }
+
+  // Mouse position
+  let mouseY = 0;
+  canvas.addEventListener('mousemove', e => mouseY = e.clientY);
+
+  // Color mapping
+  function getColor(val) {
+    const t = val / 255;
+    if (t < 0.25) return `rgb(0,0,${t*1020})`;
+    if (t < 0.5) return `rgb(0,${(t-0.25)*1020},255)`;
+    if (t < 0.75) return `rgb(${(t-0.5)*1020},255,0)`;
+    return `rgb(255,${(1-t)*1020},0)`;
+  }
+
+  // Map y-coordinate to frequency
+  function yToFreq(y) {
+    const logMin = Math.log10(minFreq);
+    const logMax = Math.log10(maxFreq);
+    const frac = 1 - y/canvas.height;
+    return Math.pow(10, logMin + frac*(logMax-logMin));
+  }
+
+  // Load audio file
+  fileInput.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const buffer = await file.arrayBuffer();
+    audioBuffer = await audioCtx.decodeAudioData(buffer);
+    pauseTime = 0;
+    startPlayback();
+  });
+
+  function startPlayback() {
+    if (!audioBuffer) return;
+    if (audioSource) audioSource.disconnect();
+    audioSource = audioCtx.createBufferSource();
+    audioSource.buffer = audioBuffer;
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 32768;
+    bufferLength = analyser.frequencyBinCount;
+    dataArray = new Uint8Array(bufferLength);
+    audioSource.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    startTime = audioCtx.currentTime - pauseTime;
+    audioSource.start(0, pauseTime);
+    isPlaying = true;
+    audioSource.onended = () => { isPlaying = false; pauseTime = 0; };
+  }
+
+  function pausePlayback() { if (!audioSource) return; audioSource.stop(); pauseTime = audioCtx.currentTime - startTime; isPlaying = false; }
+  function togglePlayPause() { if (isPlaying) pausePlayback(); else startPlayback(); }
+  function seek(delta) { if (!audioBuffer) return; pauseTime = Math.min(Math.max(0, (audioCtx.currentTime - startTime) + delta), audioBuffer.duration); if (isPlaying) startPlayback(); }
+
+  window.addEventListener('keydown', e => {
+    if (e.code==='Space') { e.preventDefault(); togglePlayPause(); }
+    if (e.code==='ArrowLeft') { e.preventDefault(); seek(-5); }
+    if (e.code==='ArrowRight') { e.preventDefault(); seek(5); }
+  });
+
+const progressContainer = document.getElementById('progressContainer');
+const progressBar = document.getElementById('progressBar');
+
+// Update the progress bar each frame
+function updateProgressBar() {
+    if (audioBuffer && isPlaying) {
+        const elapsed = audioCtx.currentTime - startTime;
+        const progress = Math.min(elapsed / audioBuffer.duration, 1);
+        progressBar.style.width = (progress * 100) + '%';
+    }
+}
+
+// Seek function based on click/drag
+function seekAudio(event) {
+    if (!audioBuffer) return;
+    const rect = progressContainer.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const percent = Math.min(Math.max(clickX / rect.width, 0), 1);
+    pauseTime = percent * audioBuffer.duration;
+    if (isPlaying) startPlayback();
+    else progressBar.style.width = (percent * 100) + '%';
+}
+
+// Mouse events for seeking
+progressContainer.addEventListener('click', seekAudio);
+let isDragging = false;
+progressContainer.addEventListener('mousedown', () => isDragging = true);
+window.addEventListener('mouseup', () => isDragging = false);
+window.addEventListener('mousemove', e => { if (isDragging) seekAudio(e); });
+
+// In your draw loop, replace the old progress bar update:
+updateProgressBar();
+
+function draw() {
+    requestAnimationFrame(draw);
+
+    if (!isPlaying) return; // Stop updating if no audio
+
+    const nyquist = audioCtx.sampleRate / 2;
+    analyser.getByteFrequencyData(dataArray);
+
+    // Scroll the spectrogram
+    const oldData = ctx.getImageData(1, 0, canvas.width-1, canvas.height);
+    ctx.putImageData(oldData, 0, 0);
+
+    const peaks = [];
+    for (let y=0; y<canvas.height; y++) {
+        const freq = yToFreq(y);
+        const bin = Math.min(bufferLength-1, Math.floor(freq/nyquist*bufferLength));
+        const val = dataArray[bin] || 0;
+        ctx.fillStyle = getColor(val);
+        ctx.fillRect(canvas.width-1, y, 1, 1);
+        if (val > 0) peaks.push({val, freq, y});
+    }
+
+    // Top N peaks
+    const numPeaks = Math.max(1, Math.min(10, parseInt(numPeaksInput.value)));
+    peaks.sort((a,b)=>b.val-a.val);
+    const topPeaks = peaks.slice(0,numPeaks);
+
+    if (toggleBoxes.checked) {
+        topPeaks.forEach(p => {
+            const midi = freqToMidi(p.freq);
+            const noteName = midiToNoteName(midi);
+            ctx.fillStyle='yellow';
+            ctx.beginPath(); ctx.arc(canvas.width-1, p.y,4,0,2*Math.PI); ctx.fill();
+            const textWidth = ctx.measureText(noteName).width;
+            ctx.fillStyle='white';
+            ctx.fillRect(canvas.width-1-textWidth-6, p.y-16, textWidth+4, 18);
+            ctx.fillStyle='black';
+            ctx.fillText(noteName, canvas.width-1-textWidth-4, p.y-4);
+        });
+    }
+
+    if (toggleGrid.checked) {
+        for (let n = 21; n <= 108; n++) {
+            const freq = 440 * Math.pow(2,(n-69)/12);
+            if (freq < minFreq || freq > maxFreq) continue;
+            const y = canvas.height - ((Math.log10(freq)-Math.log10(minFreq)) / (Math.log10(maxFreq)-Math.log10(minFreq)))*canvas.height;
+            ctx.strokeStyle = n%12===0 ? 'rgba(255,255,255,0.5)' : 'rgba(200,200,200,0.2)';
+            ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+        }
+    }
+
+    const hoveredFreq = yToFreq(mouseY);
+    freqDisplay.textContent = `Frequency: ${hoveredFreq.toFixed(1)} Hz`;
+
+    // Update progress bar
+    if (audioBuffer) {
+        const elapsed = audioCtx.currentTime - startTime;
+        const progress = Math.min(elapsed / audioBuffer.duration, 1);
+        progressBar.style.width = (progress*100)+'%';
+    }
+}
+
+
+  draw();
+}
+
+startAudioMidiVisualizer().catch(console.error);
+</script>
+</body>
+</html>
+
