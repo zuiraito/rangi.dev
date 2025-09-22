@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Keyboard Piano</title>
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: sans-serif;
+  }
+  .piano {
+    display: flex;
+    position: relative;
+  }
+  .key {
+    width: 50px;
+    height: 200px;
+    border: 1px solid black;
+    background: white;
+    margin: 0 1px;
+    text-align: center;
+    line-height: 190px;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    z-index: 1;
+    transition: background 0.1s;
+  }
+  .key.active {
+    background: #ddd;
+  }
+	.black {
+  width: 30px;
+  height: 120px;
+  background: black;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  position: absolute;
+  top: 0;
+  left: 35px; /* adjust if needed */
+  z-index: 2; /* above white keys */
+
+  display: flex;           /* flex centering */
+  justify-content: center; /* horizontal */
+  align-items: center;     /* vertical */
+
+  transition: background 0.1s;
+}
+.black.active {
+  background: #333;
+}
+
+  }
+	#oscilloscope {
+  display: block;
+  background: white; /* white background */
+  margin: 20px auto 0 auto; /* center horizontally */
+}
+
+</style>
+</head>
+<body>
+<div id="container">
+	<div id="preset-container" style="position:absolute; top:10px; left:10px; z-index:10;">
+  <label>Preset:
+    <select id="preset-select">
+      <option value="warm">Warm</option>
+      <option value="bright">Bright Bell</option>
+      <option value="soft">Soft Pad</option>
+      <option value="plucky">Plucky Lead</option>
+    </select>
+  </label>
+</div>
+
+<div id="controls">
+  <div id="adsr">
+    <label>Attack: <input type="range" id="attack" min="0" max="2" step="0.01" value="0.05"></label>
+    <label>Decay: <input type="range" id="decay" min="0" max="2" step="0.01" value="0.05"></label>
+    <label>Sustain: <input type="range" id="sustain" min="0" max="1" step="0.01" value="0.8"></label>
+    <label>Release: <input type="range" id="release" min="0" max="3" step="0.01" value="0.2"></label>
+  </div>
+
+  <div id="oscillators">
+    <!-- 3 oscillators -->
+    <div class="osc" data-index="0">
+      <label>Wave:
+        <select class="wave">
+          <option value="sine">Sine</option>
+          <option value="square">Square</option>
+          <option value="triangle">Triangle</option>
+          <option value="sawtooth">Saw</option>
+        </select>
+      </label>
+      <label>Pitch semitones: <input type="number" class="pitch" value="0" min="-24" max="24"></label>
+      <label>Volume: <input type="range" class="volume" min="0" max="0.5" step="0.01" value="0.3"></label>
+    </div>
+
+    <div class="osc" data-index="1">
+      <label>Wave:
+        <select class="wave">
+          <option value="sine">Sine</option>
+          <option value="square">Square</option>
+          <option value="triangle">Triangle</option>
+          <option value="sawtooth">Saw</option>
+        </select>
+      </label>
+      <label>Pitch semitones: <input type="number" class="pitch" value="7" min="-24" max="24"></label>
+      <label>Volume: <input type="range" class="volume" min="0" max="0.5" step="0.01" value="0.2"></label>
+    </div>
+
+    <div class="osc" data-index="2">
+      <label>Wave:
+        <select class="wave">
+          <option value="sine">Sine</option>
+          <option value="square">Square</option>
+          <option value="triangle">Triangle</option>
+          <option value="sawtooth">Saw</option>
+        </select>
+      </label>
+      <label>Pitch semitones: <input type="number" class="pitch" value="12" min="-24" max="24"></label>
+      <label>Volume: <input type="range" class="volume" min="0" max="0.5" step="0.01" value="0.1"></label>
+    </div>
+  </div>
+</div>
+<p>  </p> 
+<div class="piano"></div>
+<p>  </p> 
+<canvas id="oscilloscope" width=1131" height="200" style="border:0px solid #555; margin-top:20px;"></canvas>
+
+</div>
+
+
+<div class="piano"></div>
+
+<script>
+	// Define presets
+const presets = {
+  warm: {
+    adsr: [0.05, 0.2, 0.8, 0.3],
+    osc: [
+      ["sine", 0, 0.4],
+      ["sine", 7, 0.2],
+      ["triangle", 12, 0.1]
+    ]
+  },
+  bright: {
+    adsr: [0.02, 0.3, 0.6, 0.5],
+    osc: [
+      ["triangle", 0, 0.3],
+      ["sawtooth", 7, 0.25],
+      ["sine", 12, 0.2]
+    ]
+  },
+  soft: {
+    adsr: [0.5, 0.8, 0.7, 1.0],
+    osc: [
+      ["sine", 0, 0.25],
+      ["triangle", 7, 0.25],
+      ["sine", 12, 0.15]
+    ]
+  },
+  plucky: {
+    adsr: [0.01, 0.05, 0.6, 0.2],
+    osc: [
+      ["square", 0, 0.35],
+      ["triangle", 7, 0.15],
+      ["sawtooth", 12, 0.1]
+    ]
+  }
+};
+
+// Function to apply a preset
+function applyPreset(presetName) {
+  const preset = presets[presetName];
+  if (!preset) return;
+
+  const [attack, decay, sustain, release] = preset.adsr;
+  document.getElementById("attack").value = attack;
+  document.getElementById("decay").value = decay;
+  document.getElementById("sustain").value = sustain;
+  document.getElementById("release").value = release;
+
+  preset.osc.forEach((oscData, i) => {
+    const [wave, pitch, vol] = oscData;
+    const oscDiv = document.querySelector(`.osc[data-index="${i}"]`);
+    oscDiv.querySelector(".wave").value = wave;
+    oscDiv.querySelector(".pitch").value = pitch;
+    oscDiv.querySelector(".volume").value = vol;
+  });
+}
+
+// Listen for dropdown change
+document.getElementById("preset-select").addEventListener("change", e => {
+  applyPreset(e.target.value);
+});
+
+function updateURL() {
+  const attack = parseFloat(document.getElementById("attack").value);
+  const decay = parseFloat(document.getElementById("decay").value);
+  const sustain = parseFloat(document.getElementById("sustain").value);
+  const release = parseFloat(document.getElementById("release").value);
+
+  const oscSettings = [];
+  document.querySelectorAll(".osc").forEach(osc => {
+    const wave = osc.querySelector(".wave").value;
+    const pitch = osc.querySelector(".pitch").value;
+    const vol = osc.querySelector(".volume").value;
+    oscSettings.push(`${wave},${pitch},${vol}`);
+  });
+
+  const params = new URLSearchParams();
+  params.set("adsr", [attack, decay, sustain, release].join(","));
+  params.set("osc", oscSettings.join("|"));
+
+  history.replaceState(null, "", "?" + params.toString());
+}
+document.querySelectorAll("#controls input, #controls select").forEach(el => {
+  el.addEventListener("input", updateURL);
+});
+function loadSettingsFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("adsr")) {
+    const [a,d,s,r] = params.get("adsr").split(",").map(Number);
+    document.getElementById("attack").value = a;
+    document.getElementById("decay").value = d;
+    document.getElementById("sustain").value = s;
+    document.getElementById("release").value = r;
+  }
+
+  if (params.has("osc")) {
+    const oscSettings = params.get("osc").split("|");
+    oscSettings.forEach((set,i) => {
+      const [wave,pitch,vol] = set.split(",");
+      const osc = document.querySelector(`.osc[data-index="${i}"]`);
+      if (!osc) return;
+      osc.querySelector(".wave").value = wave;
+      osc.querySelector(".pitch").value = pitch;
+      osc.querySelector(".volume").value = vol;
+    });
+  }
+}
+
+// Call on page load
+loadSettingsFromURL();
+
+
+const frequencies = {
+  "C": 261.63, "C#": 277.18, "D": 293.66, "D#": 311.13, "E": 329.63,
+  "F": 349.23, "F#": 369.99, "G": 392.00, "G#": 415.30, "A": 440.00, "A#": 466.16, "B": 493.88,
+  "C2": 523.25, "C2#": 554.37, "D2": 587.33, "D2#": 622.25, "E2": 659.25,
+  "F2": 698.46, "F2#": 739.99, "G2": 783.99, "G2#": 830.61, "A2": 880.00, "A2#": 932.33, "B2": 987.77,
+  "C3": 1046.50, "C3#": 1108.73, "D3": 1174.66, "D3#": 1244.51, "E3": 1318.51,
+  "F3": 1396.91, "F3#": 1479.98, "G3": 1567.98, "G3#": 1661.22, "A3": 1760.00, "A3#": 1864.66, "B3": 1975.53
+};
+
+const keyMap = {
+  "z":"C","s":"C#","x":"D","d":"D#","c":"E",
+  "v":"F","g":"F#","b":"G","h":"G#","n":"A","j":"A#","m":"B",
+  ",":"C2","l":"C2#",".":"D2",";":"D2#",  "/":"E2",
+  "q":"C2","2":"C2#","w":"D2","3":"D2#","e":"E2",
+  "r":"F2","5":"F2#","t":"G2","6":"G2#","y":"A2","7":"A2#","u":"B2",
+  "i":"C3","9":"C3#","o":"D3","0":"D3#","p":"E3",
+  "[":"F3","=":"F3#","]":"G3","\\":"A3"
+};
+
+const whiteOrder = ["C","D","E","F","G","A","B","C2","D2","E2","F2","G2","A2","B2","C3","D3","E3","F3","G3","A3","B3"];
+const blackAfter = {"C":"C#","D":"D#","F":"F#","G":"G#","A":"A#","C2":"C2#","D2":"D2#","F2":"F2#","G2":"G2#","A2":"A2#","C3":"C3#","D3":"D3#","F3":"F3#","G3":"G3#","A3":"A3#"};
+
+const piano = document.querySelector(".piano");
+// Invert keyMap: note → keyboard key
+const noteToKey = {};
+for (const [key, note] of Object.entries(keyMap)) {
+  noteToKey[note] = key;
+}
+whiteOrder.forEach(note => {
+  const key = document.createElement("div");
+  key.classList.add("key");
+  key.dataset.note = note;
+  key.textContent = noteToKey[note] || note; // show keyboard key
+  piano.appendChild(key);
+
+  if (blackAfter[note]) {
+    const black = document.createElement("div");
+    black.classList.add("black");
+    black.dataset.note = blackAfter[note];
+    black.textContent = noteToKey[blackAfter[note]] || blackAfter[note]; // keyboard key
+    key.appendChild(black);
+  }
+});
+
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+
+
+
+document.addEventListener("keyup", e=>{
+  const note = keyMap[e.key];
+  if(note) {
+    const keyElem = document.querySelector(`[data-note="${note}"]`);
+    if(keyElem) keyElem.classList.remove("active");
+  }
+});
+
+const activeNotes = {}; // store gain nodes per note
+
+function playSynthNote(freq, noteKey) {
+  const attack = parseFloat(document.getElementById("attack").value);
+  const decay = parseFloat(document.getElementById("decay").value);
+  const sustain = parseFloat(document.getElementById("sustain").value);
+
+  const now = audioCtx.currentTime;
+  const gainNodes = [];
+
+  for (let i = 0; i < 3; i++) {
+    const oscDiv = document.querySelector(`.osc[data-index="${i}"]`);
+    const wave = oscDiv.querySelector(".wave").value;
+    const pitch = parseFloat(oscDiv.querySelector(".pitch").value);
+    let vol = parseFloat(oscDiv.querySelector(".volume").value) / 3; // scale
+
+    const oscFreq = freq * Math.pow(2, pitch/12);
+
+    const osc = audioCtx.createOscillator();
+    osc.type = wave;
+    osc.frequency.value = oscFreq;
+
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, now);
+
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    gainNode.gain.linearRampToValueAtTime(vol, now + attack);
+    gainNode.gain.linearRampToValueAtTime(vol * sustain, now + attack + decay);
+
+    osc.start(now);
+    osc.stop(now + 10); // stop far in future, release will be handled separately
+
+    gainNodes.push({osc, gainNode});
+  }
+
+  // store active note for keyup
+  activeNotes[noteKey] = gainNodes;
+}
+
+// Release on keyup
+function releaseNote(noteKey) {
+  const release = parseFloat(document.getElementById("release").value);
+  const now = audioCtx.currentTime;
+  if (!activeNotes[noteKey]) return;
+
+  activeNotes[noteKey].forEach(({osc, gainNode}) => {
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+    gainNode.gain.linearRampToValueAtTime(0, now + release);
+    osc.stop(now + release + 0.05);
+  });
+
+  delete activeNotes[noteKey];
+}
+
+
+function handleKeyDown(e) {
+  // Prevent browser search on "/"
+  if (e.key === "/") e.preventDefault();
+
+  const note = keyMap[e.key];
+  if (!note || e.repeat) return;
+  const freq = frequencies[note];
+  if (!freq) return;
+  playSynthNote(freq, e.key);
+	highlightKey(note);
+}
+
+function handleKeyUp(e) {
+	const note = keyMap[e.key];
+  if (!note) return;
+  releaseNote(e.key);
+	unhighlightKey(note);
+}
+
+function highlightKey(note) {
+  const keyElem = document.querySelector(`.key[data-note="${note}"], .black[data-note="${note}"]`);
+  if (keyElem) keyElem.classList.add("active");
+}
+
+function unhighlightKey(note) {
+  const keyElem = document.querySelector(`.key[data-note="${note}"], .black[data-note="${note}"]`);
+  if (keyElem) keyElem.classList.remove("active");
+}
+
+document.addEventListener("keydown", handleKeyDown);
+document.addEventListener("keyup", handleKeyUp);
+
+// Mouse events for piano keys
+piano.addEventListener("mousedown", e => {
+  const note = e.target.dataset.note;
+  if (!note) return;
+
+  const freq = frequencies[note];
+  playSynthNote(freq, note);
+  highlightKey(note);
+
+  // Add temporary listeners to release the note when mouse is released
+  const onMouseUp = (ev) => {
+    releaseNote(note);
+    unhighlightKey(note);
+    window.removeEventListener("mouseup", onMouseUp);
+  };
+  window.addEventListener("mouseup", onMouseUp);
+});
+
+piano.addEventListener("mouseup", e => {
+	const note = e.target.dataset.note;
+  if (!note) return;
+  unhighlightKey(note);
+});
+
+piano.addEventListener("mouseleave", e => {
+  const note = e.target.dataset.note;
+  if (!note) return;
+  e.target.classList.remove("active");
+});
+// Create an analyser node
+const analyser = audioCtx.createAnalyser();
+analyser.fftSize = 2048;
+const bufferLength = analyser.fftSize;
+const dataArray = new Uint8Array(bufferLength);
+
+// Connect all notes to analyser
+function playSynthNote(freq, noteKey) {
+  const attack = parseFloat(document.getElementById("attack").value);
+  const decay = parseFloat(document.getElementById("decay").value);
+  const sustain = parseFloat(document.getElementById("sustain").value);
+
+  const now = audioCtx.currentTime;
+  const gainNodes = [];
+
+  for (let i = 0; i < 3; i++) {
+    const oscDiv = document.querySelector(`.osc[data-index="${i}"]`);
+    const wave = oscDiv.querySelector(".wave").value;
+    const pitch = parseFloat(oscDiv.querySelector(".pitch").value);
+    let vol = parseFloat(oscDiv.querySelector(".volume").value) / 3;
+
+    const oscFreq = freq * Math.pow(2, pitch/12);
+    const osc = audioCtx.createOscillator();
+    osc.type = wave;
+    osc.frequency.value = oscFreq;
+
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, now);
+
+    // Connect to analyser AND destination
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    gainNode.connect(analyser);
+
+    gainNode.gain.linearRampToValueAtTime(vol, now + attack);
+    gainNode.gain.linearRampToValueAtTime(vol * sustain, now + attack + decay);
+
+    osc.start(now);
+    osc.stop(now + 10);
+
+    gainNodes.push({osc, gainNode});
+  }
+
+  activeNotes[noteKey] = gainNodes;
+}
+
+const canvas = document.getElementById("oscilloscope");
+const canvasCtx = canvas.getContext("2d");
+
+function draw() {
+  requestAnimationFrame(draw);
+
+  analyser.getByteTimeDomainData(dataArray);
+
+  // Draw a semi-transparent white rectangle instead of fully clearing
+  canvasCtx.fillStyle = "rgba(255, 255, 255, 0.3)"; // 0.1 = slow fade
+  canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+  canvasCtx.lineWidth = 2;
+  canvasCtx.strokeStyle = "#000"; // bright green waveform
+
+
+  canvasCtx.beginPath();
+
+  const sliceWidth = canvas.width / bufferLength;
+  let x = 0;
+
+  for (let i = 0; i < bufferLength; i++) {
+    const v = dataArray[i] / 128.0;
+    const y = v * canvas.height / 2;
+
+    if (i === 0) {
+      canvasCtx.moveTo(x, y);
+    } else {
+      canvasCtx.lineTo(x, y);
+    }
+    x += sliceWidth;
+  }
+
+  canvasCtx.lineTo(canvas.width, canvas.height/2);
+  canvasCtx.stroke();
+}
+
+draw();
+
+
+</script>
+</body>
+</html>
+
