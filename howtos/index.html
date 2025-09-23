@@ -96,6 +96,16 @@
 		summary: "Peak digital minimalism.",
                 description: `<ol> <li>Enable user Chrome: enter <code>about:config</code> into the address bar, accept the risks.</li> <li>Search for <code>toolkit.legacyUserProfileCustomizations.stylesheets</code> and toggle it to <code>true</code>.</li>                  <li>Locate the profile folder by clicking on the "☰" then "Help" then "Troubleshooting Information" and open it.</li>                  <li>Create a new directory named <code>chrome</code>.</li>                  <li>Inside the <code>chrome</code> directory, create two new files, <code>userChrome.css</code> and <code>userContent.css</code> (case sensitive).</li>                  <li>Add the line <code>#TabsToolbar {visibility: collapse;}</code> or <code>TabsToolbar { visibility: collapse !important; }</code> if you only want to hide the tab bar and leave the navigation bar.</li>                  <li>Save the file and restart Firefox.</li>                  </ol>                <p style='text-align:right; color:LightGray;'>(2025-08-03)</p>`
             },
+            {
+                id: ,
+                title: "Map Caps-Lock to Esc in gnome",
+                imageUrl: "",
+		summary: "
+			gsettings set org.gnome.desktop.input-sources xkb-options \"['caps:escape']\"",
+                description: "<p style='text-align:right; color:LightGray;'>
+			gsettings set org.gnome.desktop.input-sources xkb-options \"['caps:escape']\"
+			(date)</p>"
+            },
 /*
             {
                 id: ,
