@@ -101,7 +101,7 @@ async function startSpectrogram() {
   canvas.addEventListener('mousemove', e => mouseY = e.clientY);
 
   const minFreq = 50;
-  const maxFreq = 2000;
+  const maxFreq = 15000;
   const nyquist = audioCtx.sampleRate / 2;
 
   const noteNames = ["A","A#","B","C","C#","D","D#","E","F","F#","G","G#"];
