@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chord Graph with Tension Colors</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+body { font-family: sans-serif; margin: 0; overflow: hidden; }
+.node circle { stroke: #333; stroke-width: 1.5px; cursor: pointer; }
+.node text { pointer-events: none; font-size: 14px; font-weight: bold; }
+.link { stroke: #999; stroke-width: 2px; }
+.hidden { opacity: 0; pointer-events: none; }
+.highlight circle { fill: #ffcc00 !important; }
+.locked circle { stroke: #333; stroke-width: 1.5px; }
+</style>
+</head>
+<body>
+<script>
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+// Nodes with numeric tension (0=consonant, 100=very dissonant)
+const nodesData = [
+  {id: "I", tension: 0},       // tonic
+  {id: "ii", tension: 30},
+  {id: "iii", tension: 40},
+  {id: "IV", tension: 20},
+  {id: "V", tension: 70},      // dominant
+  {id: "vi", tension: 10},
+  {id: "vii°", tension: 90},   // diminished
+  {id: "V/VII", tension: 80},  // secondary dominant
+  {id: "V/ii", tension: 60},
+  {id: "V/iii", tension: 65},
+  {id: "V/vi", tension: 60},
+  {id: "bIII", tension: 50},   // modal mixture
+  {id: "bVI", tension: 50},
+  {id: "bVII", tension: 50}
+];
+
+// Links representing common harmonic progressions
+const linksData = [
+  {source: "I", target: "V"}, {source: "I", target: "IV"}, {source: "I", target: "vi"}, {source: "I", target: "V/VII"}, {source: "I", target: "iii"},
+  {source: "ii", target: "V"}, {source: "ii", target: "vii°"}, {source: "ii", target: "V/vi"},
+  {source: "iii", target: "vi"}, {source: "iii", target: "V/ii"}, {source: "iii", target: "IV"},
+  {source: "IV", target: "I"}, {source: "IV", target: "ii"}, {source: "IV", target: "V"}, {source: "IV", target: "vii°"},
+  {source: "V", target: "I"}, {source: "V", target: "vi"},
+  {source: "vi", target: "ii"}, {source: "vi", target: "IV"}, {source: "vi", target: "V/ii"},
+  {source: "vii°", target: "I"}, {source: "vii°", target: "iii"},
+  {source: "V/VII", target: "V"}, {source: "V/ii", target: "ii"}, {source: "V/iii", target: "iii"}, {source: "V/vi", target: "vi"},
+  {source: "bIII", target: "IV"}, {source: "bVI", target: "ii"}, {source: "bVII", target: "I"}
+];
+
+// Initialize nodes
+nodesData.forEach(n => { n.visible = n.id === "I"; n.locked = n.id === "I"; n.parent = null; });
+
+// Convert link source/target to node objects
+linksData.forEach(l => {
+  l.source = nodesData.find(n => n.id === l.source);
+  l.target = nodesData.find(n => n.id === l.target);
+  l.visible = l.source.visible && l.target.visible;
+});
+
+// Color scale for tension
+const colorScale = d3.scaleLinear()
+  .domain([0, 100])
+  .range(["#66cc66","#ff6666"]); // green → red
+
+
+
+// Simulation
+const simulation = d3.forceSimulation(nodesData)
+  .force("link", d3.forceLink(linksData).id(d => d.id).distance(200))
+  .force("charge", d3.forceManyBody().strength(-1000))
+  .force("center", d3.forceCenter(width/2, height/2))
+  .force("collision", d3.forceCollide().radius(35)); // prevents node overlap
+
+// SVG
+const svg = d3.select("body").append("svg").attr("width", width).attr("height", height);
+
+// Links
+const link = svg.append("g").attr("class", "links")
+  .selectAll("line")
+  .data(linksData)
+  .enter().append("line")
+  .attr("class", "link");
+
+// Nodes
+const node = svg.append("g").attr("class", "nodes")
+  .selectAll("g")
+  .data(nodesData)
+  .enter().append("g")
+  .attr("class", "node")
+  .on("click", selectNode)
+  .call(d3.drag()
+      .on("start", dragstarted)
+      .on("drag", dragged)
+      .on("end", dragended));
+
+node.append("circle").attr("r", 30);
+node.append("text").attr("dy", 5).attr("text-anchor", "middle").text(d => d.id);
+
+// Tick
+simulation.on("tick", () => {
+  link.attr("x1", d => d.source.x)
+      .attr("y1", d => d.source.y)
+      .attr("x2", d => d.target.x)
+      .attr("y2", d => d.target.y);
+  node.attr("transform", d => `translate(${d.x},${d.y})`);
+  updateVisibility();
+});
+
+function dragstarted(event, d) { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
+function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+function dragended(event, d) { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
+
+// Update visibility & colors
+function updateVisibility() {
+  node.select("circle")
+      .attr("class", d => d.visible ? (d.locked ? "locked" : "") : "hidden")
+      .attr("fill", d => d.visible ? colorScale(d.tension) : "none");
+  node.select("text").attr("class", d => d.visible ? "" : "hidden");
+  link.attr("class", l => l.visible ? "link" : "hidden");
+}
+
+// Click handler
+function selectNode(event, clickedNode) {
+  clickedNode.locked = true;
+  node.select("circle").classed("highlight", false);
+  d3.select(this).select("circle").classed("highlight", true);
+
+  // Hide siblings and their links
+  const siblings = nodesData.filter(n => n.parent === clickedNode.parent && n !== clickedNode && !n.locked);
+  siblings.forEach(sib => {
+    sib.visible = false;
+    linksData.forEach(l => { if (l.source === sib || l.target === sib) l.visible = false; });
+  });
+
+  // Reveal children
+  linksData.forEach(l => {
+    if (l.source === clickedNode) { l.visible = true; l.target.visible = true; l.target.parent = clickedNode.id; }
+  });
+
+  // Keep links from locked nodes visible
+  linksData.forEach(l => { if (l.source.locked && l.target.visible) l.visible = true; });
+
+  updateVisibility();
+}
+</script>
+</body>
+</html>
+
