@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>URL Path Timer</title>
+<style>
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: sans-serif;
+    text-align: center;
+}
+
+  input { font-size: 1.2em; padding: 0.3em; }
+  button { font-size: 1.2em; padding: 0.3em 0.5em; }
+	#timer {
+    font-size: 15vw; /* 15% of the viewport width */
+    white-space: nowrap;
+}
+
+</style>
+</head>
+<body>
+<div id="inputContainer">
+    <input id="timeInput" placeholder="enter timer length" autofocus>
+</div>
+
+<div id="timer"></div>
+
+<script>
+function startTimer() {
+    let input = document.getElementById('timeInput').value.trim();
+    if (!input) return;
+
+    let duration = parseTimeString(input);
+    if (!duration) {
+        alert("Invalid format! Use e.g. 50m, 3s, 1h, 1d");
+        return;
+    }
+
+    const endTime = Date.now() + duration;
+
+    // Update URL with end timestamp
+    const url = new URL(window.location);
+    url.searchParams.set('end', endTime);
+    window.history.replaceState({}, '', url);
+
+    runCountdown(endTime);
+}
+function parseTimeString(str) {
+    const match = str.match(/^(\d+)([smhd])$/);
+    if (!match) return null;
+
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+
+    switch (unit) {
+        case 's': return value * 1000;
+        case 'm': return value * 60 * 1000;
+        case 'h': return value * 60 * 60 * 1000;
+        case 'd': return value * 24 * 60 * 60 * 1000;
+        default: return null;
+    }
+}function runCountdown(endTime) {
+    // Hide input container
+    document.getElementById('inputContainer').style.display = 'none';
+    
+    const timerEl = document.getElementById('timer');
+
+    function update() {
+        const remaining = endTime - Date.now();
+        if (remaining <= 0) {
+            timerEl.textContent = "Time's up!";
+            clearInterval(interval);
+            return;
+        }
+        timerEl.textContent = formatTime(remaining);
+    }
+
+    update();
+    const interval = setInterval(update, 1000);
+}function formatTime(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+}
+const input = document.getElementById('timeInput');
+input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        startTimer();
+    }
+});
+document.addEventListener("DOMContentLoaded", function() {
+
+const urlParams = new URLSearchParams(window.location.search);
+const endTimeParam = parseInt(urlParams.get('end'), 10);
+
+if (endTimeParam && !isNaN(endTimeParam)) {
+    runCountdown(endTimeParam);
+} else {
+    const path = window.location.pathname;
+    const timeMatch = path.match(/timer(\d+[smhd])/i);
+    if (timeMatch) {
+        const duration = parseTimeString(timeMatch[1]);
+        if (duration) {
+            const endTime = Date.now() + duration;
+            const url = new URL(window.location);
+            url.searchParams.set('end', endTime);
+            window.history.replaceState({}, '', url);
+            runCountdown(endTime);
+        } else {
+            document.getElementById('timer').textContent = "Invalid time in URL!";
+        }
+    }
+}
+});
+</script>
+
+</body>
+</html>

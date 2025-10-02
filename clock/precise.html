@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Precise Clock</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f4f4f4;
+      color: #111;
+      font-family: "IBM Plex Mono", "Courier New", monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      touch-action: manipulation;
+    }
+    .clock {
+      background: white;
+      padding: 40px 60px;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .time {
+      font-size: clamp(36px, 12vw, 96px);
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    .date {
+      font-size: clamp(16px, 4vw, 24px);
+      color: #555;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="clock">
+    <h1 class="time" id="time">--:--:--.--</h1>
+    <div class="date" id="date">----</div>
+  </div>
+
+  <script>
+    const timeEl = document.getElementById("time");
+    const dateEl = document.getElementById("date");
+
+    function pad(n, width=2) {
+      return String(n).padStart(width, "0");
+    }
+
+    function update() {
+      const d = new Date();
+      const hh = pad(d.getHours());
+      const mm = pad(d.getMinutes());
+      const ss = pad(d.getSeconds());
+      const ms = pad(Math.floor(d.getMilliseconds() / 10)); // hundredths
+      timeEl.textContent = `${hh}:${mm}:${ss}.${ms}`;
+
+      const isoDate = d.toISOString().slice(0,10); // YYYY-MM-DD
+      dateEl.textContent = isoDate;
+      requestAnimationFrame(update);
+    }
+
+    update();
+
+    document.body.addEventListener("click", () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(()=>{});
+      } else {
+        document.exitFullscreen().catch(()=>{});
+      }
+    });
+  </script>
+</body>
+</html>
+
