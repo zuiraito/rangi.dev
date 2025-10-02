@@ -284,14 +284,38 @@ document.getElementById('nameInput').addEventListener('keydown', function(e) {
 // Resume from URL
 document.addEventListener("DOMContentLoaded", function() {
     const urlParams = new URLSearchParams(window.location.search);
-    const startTimeParam = parseInt(urlParams.get('start'), 10);
-    const endTimeParam = parseInt(urlParams.get('end'), 10);
     hideSeconds = urlParams.get('hideSeconds') === "1";
-    const nameParam = urlParams.get('name') ? decodeURIComponent(urlParams.get('name')) : null;
 
-    // restore checkbox state
+    const nameParam = urlParams.get('name') ? decodeURIComponent(urlParams.get('name')) : null;
+    const lengthParam = urlParams.get('length'); // e.g., "50m"
+
     document.getElementById('hideSeconds').checked = hideSeconds;
 
+if (lengthParam) {
+    const duration = parseTimeString(lengthParam);
+    if (duration) {
+        const startTime = Date.now();
+        const endTime = startTime + duration;
+        totalDuration = duration;
+
+        runCountdown(startTime, endTime, nameParam, hideSeconds);
+
+        // Update URL: remove length param, add start & end
+        const url = new URL(window.location);
+        url.searchParams.delete('length');  // remove length
+        url.searchParams.set('start', startTime);
+        url.searchParams.set('end', endTime);
+        if (nameParam) url.searchParams.set('name', encodeURIComponent(nameParam));
+        window.history.replaceState({}, '', url);
+    } else {
+        console.warn("Invalid length parameter in URL");
+    }
+    return;
+}
+
+    // Resume from previous timer if start & end exist
+    const startTimeParam = parseInt(urlParams.get('start'), 10);
+    const endTimeParam = parseInt(urlParams.get('end'), 10);
     if (startTimeParam && endTimeParam && !isNaN(startTimeParam) && !isNaN(endTimeParam)) {
         if (Date.now() >= endTimeParam) {
             // Timer already expired, reload clean page
@@ -302,6 +326,7 @@ document.addEventListener("DOMContentLoaded", function() {
         runCountdown(startTimeParam, endTimeParam, nameParam, hideSeconds);
     }
 });
+
 
 // --- Click on timer toggles fullscreen ---
 document.getElementById("timer").addEventListener("click", () => {
