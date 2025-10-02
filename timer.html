@@ -63,10 +63,10 @@ label {
   --text-color: white;
 }
 .fullscreen #progressContainer {
-    background: #222;
+    background: white;
 }
 .fullscreen #progressBar {
-    background: white;
+    background: #222;
 }
 .flash {
   --bg-color: white;
@@ -253,7 +253,7 @@ const flashInterval = setInterval(() => {
 
         // Update progress bar
         const elapsed = Date.now() - startTime;
-        const percent = Math.max(0, 100 - (elapsed / totalDuration) * 100);
+        const percent = Math.max(0, (elapsed / totalDuration) * 100);
         progressBar.style.width = percent + "%";
     }
 
