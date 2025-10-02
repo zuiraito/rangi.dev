@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>URL Path Timer</title>
+<title>Timer</title>
 <style>
+:root {
+    --bg-color: white;
+    --text-color: black;
+}
 body {
     display: flex;
     flex-direction: column;
@@ -13,27 +17,101 @@ body {
     margin: 0;
     font-family: sans-serif;
     text-align: center;
+    background: var(--bg-color);
+    color: var(--text-color);
+    transition: background 0.5s, color 0.5s;
+}
+input { 
+    font-size: 1.2em; 
+    padding: 0.3em; 
+    margin-bottom: 0.5em; 
+}
+label {
+    font-size: 1em;
+    margin-top: 0.3em;
+}
+#nameDisplay {
+    font-size: 3em;
+    margin-bottom: 0.3em;
+    display: none;
+}
+#timer {
+    font-size: 15vw;
+    white-space: nowrap;
+    display: none;
+    cursor: pointer; /* indicates clickable for fullscreen */
+}
+#progressContainer {
+    width: 80%;
+    height: 6px;
+    background: black;
+    border-radius: 3px;
+    margin-top: 1em;
+    overflow: hidden;
+    display: none; /* hidden until timer starts */
+}
+#progressBar {
+    height: 100%;
+    width: 100%;
+    background: #eee;
+    transition: width 1s linear;
+}
+/* --- Presentation mode --- */
+.fullscreen {
+	font-weight: 100;
+	--bg-color: black;
+  --text-color: white;
+}
+.fullscreen #progressContainer {
+    background: #222;
+}
+.fullscreen #progressBar {
+    background: white;
+}
+.flash {
+  --bg-color: white;
+  --text-color: black;
 }
 
-  input { font-size: 1.2em; padding: 0.3em; }
-  button { font-size: 1.2em; padding: 0.3em 0.5em; }
-	#timer {
-    font-size: 15vw; /* 15% of the viewport width */
-    white-space: nowrap;
+#endButtons button {
+    padding: 0.4em 1em;
+    margin: 0 0.5em;
+    border: 0px solid currentColor; /* uses current text color */
+    border-radius: 5px;
+    background: transparent;
+    color: inherit; /* matches text color */
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s;
+}
+
+#endButtons button:hover {
+    background: #eee; /* invert background */
 }
 
 </style>
 </head>
 <body>
 <div id="inputContainer">
-    <input id="timeInput" placeholder="enter timer length" autofocus>
+	  <h1> Timer </h1>
+    <label><input type="checkbox" id="hideSeconds"> Hide seconds</label><br>
+    <input id="nameInput" placeholder="name" autofocus>
+    <input id="timeInput" placeholder="length (then press enter)" >
 </div>
 
+<div id="nameDisplay"></div>
 <div id="timer"></div>
+<div id="progressContainer">
+    <div id="progressBar"></div>
+</div>
 
 <script>
+let totalDuration = 0;
+let hideSeconds = false;
+
 function startTimer() {
+    let name = document.getElementById('nameInput').value.trim();
     let input = document.getElementById('timeInput').value.trim();
+    hideSeconds = document.getElementById('hideSeconds').checked;
     if (!input) return;
 
     let duration = parseTimeString(input);
@@ -42,15 +120,21 @@ function startTimer() {
         return;
     }
 
-    const endTime = Date.now() + duration;
+    totalDuration = duration;
+    const startTime = Date.now();
+    const endTime = startTime + duration;
 
-    // Update URL with end timestamp
+    // Update URL with start & end timestamps, name, and hideSeconds flag
     const url = new URL(window.location);
+    url.searchParams.set('start', startTime);
     url.searchParams.set('end', endTime);
+    url.searchParams.set('hideSeconds', hideSeconds ? "1" : "0");
+    if (name) url.searchParams.set('name', encodeURIComponent(name));
     window.history.replaceState({}, '', url);
 
-    runCountdown(endTime);
+    runCountdown(startTime, endTime, name, hideSeconds);
 }
+
 function parseTimeString(str) {
     const match = str.match(/^(\d+)([smhd])$/);
     if (!match) return null;
@@ -65,60 +149,169 @@ function parseTimeString(str) {
         case 'd': return value * 24 * 60 * 60 * 1000;
         default: return null;
     }
-}function runCountdown(endTime) {
-    // Hide input container
+}
+
+function runCountdown(startTime, endTime, name, hideSeconds) {
+    totalDuration = endTime - startTime;
+
+    // Hide inputs
     document.getElementById('inputContainer').style.display = 'none';
     
     const timerEl = document.getElementById('timer');
+    const nameEl = document.getElementById('nameDisplay');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
 
+    if (name) {
+        nameEl.textContent = name;
+        nameEl.style.display = 'block';
+    }
+    timerEl.style.display = 'block';
+    progressContainer.style.display = 'block';
+
+    // Create end buttons container
+    let endButtons = document.createElement("div");
+    endButtons.style.marginTop = "1em";
+    endButtons.style.display = "none"; // hidden initially
+    endButtons.id = "endButtons";
+    document.body.appendChild(endButtons);
+
+    function showEndButtons() {
+        endButtons.innerHTML = ""; // clear old buttons
+        // Repeat button
+        const repeatBtn = document.createElement("button");
+        repeatBtn.textContent = "Repeat";
+        repeatBtn.onclick = () => {
+            const newStart = Date.now();
+            const newEnd = newStart + totalDuration;
+            const url = new URL(window.location);
+            url.searchParams.set('start', newStart);
+            url.searchParams.set('end', newEnd);
+            window.history.replaceState({}, '', url);
+            endButtons.style.display = "none";
+            runCountdown(newStart, newEnd, name, hideSeconds);
+        };
+        // New Timer button
+        const newBtn = document.createElement("button");
+        newBtn.textContent = "New Timer";
+        newBtn.onclick = () => {
+					window.location.href = "https://rangi.dev/timer";
+        };
+        endButtons.appendChild(repeatBtn);
+        endButtons.appendChild(newBtn);
+        endButtons.style.display = "block";
+    }
+	const doneTranslations = ["done", "fertig", "fini", "おしまい", "terminé", "finito", "hecho", "acabado"];
     function update() {
         const remaining = endTime - Date.now();
-        if (remaining <= 0) {
-            timerEl.textContent = "Time's up!";
-            clearInterval(interval);
-            return;
-        }
-        timerEl.textContent = formatTime(remaining);
+if (remaining <= 0) {
+    clearInterval(interval);
+
+let flashes = 0;
+const flashInterval = setInterval(() => {
+    document.body.classList.toggle("flash");
+    flashes++;
+    if (flashes >= 6) { // 3 cycles
+        clearInterval(flashInterval);
+        document.body.classList.remove("flash");
+        showEndButtons();
+
+        const doneTranslations = [
+            "Time's up", "fertig", "fini",
+            "終了しました", "完成", "끝", "تم", "готово",
+            "terminé", "finito", "hecho", "acabado",
+            "เสร็จสิ้น", "पूर्ण", "הושלם"
+        ];
+        const randomDone = doneTranslations[Math.floor(Math.random() * doneTranslations.length)];
+        timerEl.textContent = randomDone;
+        document.title = (name ? `${name} - ` : "") + randomDone + "!";
+    }
+}, 400);
+
+    progressBar.style.width = "0%";
+    return;
+}
+
+
+        const formatted = formatAdaptiveTime(remaining, hideSeconds);
+        timerEl.textContent = formatted;
+        document.title = `${formatted} - ${name || "Timer"}`;
+
+        // Update progress bar
+        const elapsed = Date.now() - startTime;
+        const percent = Math.max(0, 100 - (elapsed / totalDuration) * 100);
+        progressBar.style.width = percent + "%";
     }
 
     update();
     const interval = setInterval(update, 1000);
-}function formatTime(ms) {
-    const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
 }
-const input = document.getElementById('timeInput');
-input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        startTimer();
+
+function formatAdaptiveTime(ms, hideSeconds) {
+    let totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    totalSeconds %= 86400;
+    const hours = Math.floor(totalSeconds / 3600);
+    totalSeconds %= 3600;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (days > 0) {
+        return hideSeconds
+            ? `${days}d ${hours}:${minutes.toString().padStart(2,'0')}`
+            : `${days}d ${hours}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    } else if (hours > 0) {
+        return hideSeconds
+            ? `${hours}:${minutes.toString().padStart(2,'0')}`
+            : `${hours}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    } else if (minutes > 0) {
+        return hideSeconds
+            ? `${minutes}`
+            : `${minutes}:${seconds.toString().padStart(2,'0')}`;
+    } else {
+        return hideSeconds ? "0" : `${seconds}`;
+    }
+}
+
+// Enter to start
+document.getElementById('timeInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') startTimer();
+});
+document.getElementById('nameInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') startTimer();
+});
+
+// Resume from URL
+document.addEventListener("DOMContentLoaded", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const startTimeParam = parseInt(urlParams.get('start'), 10);
+    const endTimeParam = parseInt(urlParams.get('end'), 10);
+    hideSeconds = urlParams.get('hideSeconds') === "1";
+    const nameParam = urlParams.get('name') ? decodeURIComponent(urlParams.get('name')) : null;
+
+    // restore checkbox state
+    document.getElementById('hideSeconds').checked = hideSeconds;
+
+    if (startTimeParam && endTimeParam && !isNaN(startTimeParam) && !isNaN(endTimeParam)) {
+        if (Date.now() >= endTimeParam) {
+            // Timer already expired, reload clean page
+            window.location.href = "https://rangi.dev/timer";
+            return;
+        }
+        totalDuration = endTimeParam - startTimeParam;
+        runCountdown(startTimeParam, endTimeParam, nameParam, hideSeconds);
     }
 });
-document.addEventListener("DOMContentLoaded", function() {
 
-const urlParams = new URLSearchParams(window.location.search);
-const endTimeParam = parseInt(urlParams.get('end'), 10);
-
-if (endTimeParam && !isNaN(endTimeParam)) {
-    runCountdown(endTimeParam);
-} else {
-    const path = window.location.pathname;
-    const timeMatch = path.match(/timer(\d+[smhd])/i);
-    if (timeMatch) {
-        const duration = parseTimeString(timeMatch[1]);
-        if (duration) {
-            const endTime = Date.now() + duration;
-            const url = new URL(window.location);
-            url.searchParams.set('end', endTime);
-            window.history.replaceState({}, '', url);
-            runCountdown(endTime);
-        } else {
-            document.getElementById('timer').textContent = "Invalid time in URL!";
-        }
+// --- Click on timer toggles fullscreen ---
+document.getElementById("timer").addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        document.body.classList.add("fullscreen");
+    } else {
+        document.exitFullscreen().catch(() => {});
+        document.body.classList.toggle("fullscreen");
     }
-}
 });
 </script>
 
