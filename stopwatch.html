@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stopwatch</title>
+<style>
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: sans-serif;
+    text-align: center;
+}
+
+input { 
+    font-size: 1.2em; 
+    padding: 0.3em; 
+}
+
+#nameDisplay {
+    font-size: 3em;
+    margin-bottom: 0.2em;
+    display: none; /* hidden initially */
+}
+
+#timer {
+    font-size: 10vw; /* 15% of the viewport width */
+    white-space: nowrap;
+    display: none; /* hidden initially */
+}
+</style>
+</head>
+<body>
+
+<div id="inputContainer">
+    <input id="nameInput" placeholder="Enter stopwatch name" autofocus>
+</div>
+
+<div id="nameDisplay"></div>
+<div id="timer">00:00:00</div>
+
+<script>
+function startStopwatch(name) {
+    const startTime = Date.now();
+
+    // Save start timestamp and name to URL
+    const url = new URL(window.location);
+    url.searchParams.set('start', startTime);
+    url.searchParams.set('name', encodeURIComponent(name));
+    window.history.replaceState({}, '', url);
+
+    // Hide input, show name and timer
+    document.getElementById('inputContainer').style.display = 'none';
+    const nameEl = document.getElementById('nameDisplay');
+    const timerEl = document.getElementById('timer');
+    nameEl.textContent = name;
+    nameEl.style.display = 'block';
+    timerEl.style.display = 'block';
+
+    runStopwatch(startTime);
+}
+
+function runStopwatch(startTime) {
+    const timerEl = document.getElementById('timer');
+
+    function update() {
+        const elapsed = Date.now() - startTime;
+        timerEl.textContent = formatAdaptiveTime(elapsed);
+    }
+
+    update();
+    setInterval(update, 1000);
+}
+
+function formatAdaptiveTime(ms) {
+    let totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / (24 * 3600));
+    totalSeconds %= 24 * 3600;
+    const hours = Math.floor(totalSeconds / 3600);
+    totalSeconds %= 3600;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (days > 0) {
+        return `${days}:${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    } else if (hours > 0) {
+        return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    } else if (minutes > 0) {
+        return `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    } else {
+        return `${seconds}`;
+    }
+}
+
+// Start stopwatch on Enter
+document.getElementById('nameInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        const name = this.value.trim();
+        if (name) startStopwatch(name);
+    }
+});
+
+// Load from URL if present
+document.addEventListener("DOMContentLoaded", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const startParam = parseInt(urlParams.get('start'), 10);
+    const nameParam = urlParams.get('name') ? decodeURIComponent(urlParams.get('name')) : null;
+
+    if (startParam && !isNaN(startParam) && nameParam) {
+        document.getElementById('inputContainer').style.display = 'none';
+        const nameEl = document.getElementById('nameDisplay');
+        const timerEl = document.getElementById('timer');
+        nameEl.textContent = nameParam;
+        nameEl.style.display = 'block';
+        timerEl.style.display = 'block';
+        runStopwatch(startParam);
+    }
+});
+</script>
+
+</body>
+</html>
+
