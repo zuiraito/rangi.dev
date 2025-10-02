@@ -105,6 +105,19 @@ label {
 </div>
 
 <script>
+let wakeLock = null;
+
+async function requestWakeLock() {
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log("Screen will stay awake");
+        wakeLock.addEventListener('release', () => {
+            console.log('Wake lock released');
+        });
+    } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
+    }
+}
 let totalDuration = 0;
 let hideSeconds = false;
 
@@ -152,6 +165,7 @@ function parseTimeString(str) {
 }
 
 function runCountdown(startTime, endTime, name, hideSeconds) {
+  	requestWakeLock();
     totalDuration = endTime - startTime;
 
     // Hide inputs
