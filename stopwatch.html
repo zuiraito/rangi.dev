@@ -27,7 +27,7 @@ input {
 }
 
 #timer {
-    font-size: 10vw; /* 15% of the viewport width */
+    font-size: 15vw; /* 15% of the viewport width */
     white-space: nowrap;
     display: none; /* hidden initially */
 }
@@ -60,15 +60,19 @@ function startStopwatch(name) {
     nameEl.style.display = 'block';
     timerEl.style.display = 'block';
 
-    runStopwatch(startTime);
+    runStopwatch(startTime, name);
 }
 
-function runStopwatch(startTime) {
+function runStopwatch(startTime, name) {
     const timerEl = document.getElementById('timer');
 
     function update() {
         const elapsed = Date.now() - startTime;
         timerEl.textContent = formatAdaptiveTime(elapsed);
+
+        // Update page title
+        const significantUnit = getMostSignificantUnit(elapsed);
+        document.title = `${significantUnit} - ${name}`;
     }
 
     update();
@@ -84,15 +88,20 @@ function formatAdaptiveTime(ms) {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
 
-    if (days > 0) {
-        return `${days}:${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-    } else if (hours > 0) {
-        return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-    } else if (minutes > 0) {
-        return `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-    } else {
-        return `${seconds}`;
-    }
+    if (days > 0) return `${days}:${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    if (hours > 0) return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    if (minutes > 0) return `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    return `${seconds}s`;
+}
+
+// Determine the most significant unit for the title
+function getMostSignificantUnit(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    if (totalSeconds < 60) return `${totalSeconds} sec`;
+    if (totalSeconds < 3600) return `${Math.floor(totalSeconds / 60)} min`;
+    if (totalSeconds < 86400) return `${Math.floor(totalSeconds / 3600)} hours`;
+    if (totalSeconds < 31536000) return `${Math.floor(totalSeconds / 86400)} days`;
+    return `${Math.floor(totalSeconds / 31536000)} y`;
 }
 
 // Start stopwatch on Enter
@@ -116,7 +125,7 @@ document.addEventListener("DOMContentLoaded", function() {
         nameEl.textContent = nameParam;
         nameEl.style.display = 'block';
         timerEl.style.display = 'block';
-        runStopwatch(startParam);
+        runStopwatch(startParam, nameParam);
     }
 });
 </script>
