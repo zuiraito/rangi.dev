@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Minimal Clock</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#000;--fg:#fff}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--fg);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family:'Roboto', sans-serif;
+      font-weight:100;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      touch-action:manipulation;
+    }
+
+    .time{
+      font-weight:100;
+      font-size:clamp(64px, 25vw, 260px);
+      line-height:1;
+      letter-spacing:-0.04em;
+      text-align:center;
+      user-select:none;
+      margin:0;
+      padding:0;
+    }
+
+    @media (max-height:420px){
+      .time{font-size:clamp(48px, 20vw, 160px)}
+    }
+  </style>
+</head>
+<body>
+  <h1 class="time" id="time">--:--</h1>
+
+  <script>
+    const timeEl = document.getElementById('time');
+
+    function pad(n){return String(n).padStart(2,'0')}
+
+    function updateClock(){
+      const d = new Date();
+      const hh = pad(d.getHours());
+      const mm = pad(d.getMinutes());
+      timeEl.textContent = `${hh}:${mm}`;
+    }
+
+    function tick(){
+      updateClock();
+      requestAnimationFrame(tick);
+    }
+
+    // Request fullscreen on tap (for phones)
+    document.body.addEventListener('click', ()=>{
+      if(document.fullscreenElement) return;
+      if(document.body.requestFullscreen){
+        document.body.requestFullscreen();
+      }
+    });
+
+    updateClock();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
