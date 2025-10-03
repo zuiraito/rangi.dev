@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Your IP</title></head>
+<body>
+  <h1>Your IP address</h1>
+  <p id="ip">Loading...</p>
+
+  <script>
+    fetch("https://api64.ipify.org?format=json")
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("ip").textContent = data.ip;
+      })
+      .catch(() => {
+        document.getElementById("ip").textContent = "Could not get IP";
+      });
+  </script>
+</body>
+</html>
