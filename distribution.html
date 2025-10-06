@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Time Distribution (by Category)</title>
+<style>
+  body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 24px; color:#111; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:20px; }
+  h1 { margin:0; font-size:20px; }
+  input[type="file"], input[type="date"] { font-size:14px; padding:4px 6px; border:1px solid #ccc; border-radius:6px; }
+  button, select { padding:8px 10px; border-radius:8px; border:1px solid #ccc; background:#f7f7f8; cursor:pointer; }
+  button:active{ transform:translateY(1px); }
+  .chart-wrap { width:100%; max-width:900px; margin-top:24px; }
+  svg { width:100%; height:360px; background:linear-gradient(180deg,#fff,#fbfbfc); border:1px solid #eee; border-radius:8px; }
+  .tooltip { position:absolute; pointer-events:none; background:#222; color:#fff; padding:6px 8px; border-radius:6px; font-size:13px; opacity:0; transition:opacity .12s; transform:translate(-50%,-110%);}
+  .category-title { font-size:18px; font-weight:600; margin-top:30px; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .color-box { width:14px; height:14px; border-radius:3px; }
+  footer { margin-top:18px; color:#666; font-size:13px; max-width:900px; }
+  pre { background:#0b1220; color:#cfe8ff; padding:12px; border-radius:8px; overflow:auto; max-width:900px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Distribution across 24 hours (by Category)</h1>
+    <div style="font-size:13px;color:#444;">Aggregates minutes per hour; one chart per category.</div>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <input id="file" type="file" accept=".csv,text/csv" />
+    <button id="loadExample">Load example CSV</button>
+    <label style="font-size:13px;">Mode:
+      <select id="mode">
+        <option value="minutes">Absolute minutes</option>
+        <option value="percent">Percent of total</option>
+      </select>
+    </label>
+    <label style="font-size:13px;">From: <input type="date" id="startDate"></label>
+    <label style="font-size:13px;">To: <input type="date" id="endDate"></label>
+    <button id="applyRange">Apply</button>
+  </div>
+</header>
+
+<div id="charts"></div>
+
+<section style="margin-top:18px; max-width:900px">
+  <details>
+    <summary><strong>Example CSV format</strong></summary>
+    <pre>
+Date,Start,End,Category
+2025-09-28,23:45,07:15,Sleep
+2025-09-29,14:00,16:30,Studying
+2025-09-29,17:00,18:15,Procrastination
+2025-09-30,23:30,07:00,Sleep
+2025-10-01,20:00,22:00,Studying
+2025-10-02,22:50,06:20,Sleep
+    </pre>
+  </details>
+</section>
+
+<footer>
+  Notes: Each Category gets its own color and chart. Date range filters by <code>Date</code>.  
+  If End ≤ Start, the code assumes the activity passes midnight.
+</footer>
+
+<script>
+const palette = ['#2563eb','#f97316','#16a34a','#9333ea','#dc2626','#0d9488','#78350f','#db2777'];
+const exampleCSV = `Date,Start,End,Category
+2025-09-28,23:45,07:15,Sleep
+2025-09-29,14:00,16:30,Studying
+2025-09-29,17:00,18:15,Procrastination
+2025-09-30,23:30,07:00,Sleep
+2025-10-01,20:00,22:00,Studying
+2025-10-02,22:50,06:20,Sleep
+`;
+
+const fileInput = document.getElementById('file');
+const loadExampleButton = document.getElementById('loadExample');
+const modeSelect = document.getElementById('mode');
+const chartsContainer = document.getElementById('charts');
+const startInput = document.getElementById('startDate');
+const endInput = document.getElementById('endDate');
+const applyRangeButton = document.getElementById('applyRange');
+
+let allRows = [];
+let lastGrouped = {};
+
+fileInput.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => runCSV(reader.result);
+  reader.readAsText(f);
+});
+loadExampleButton.addEventListener('click', () => runCSV(exampleCSV));
+modeSelect.addEventListener('change', () => drawAll(lastGrouped));
+applyRangeButton.addEventListener('click', () => applyDateFilter());
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length);
+  if (lines.length <= 1) return [];
+  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const idxDate = header.indexOf('date');
+  const idxStart = header.findIndex(h => h.includes('start'));
+  const idxEnd = header.findIndex(h => h.includes('end'));
+  const idxCat = header.findIndex(h => h.includes('cat'));
+  const rows = [];
+  for (let i=1;i<lines.length;i++){
+    const cells = lines[i].split(',').map(c => c.trim());
+    if (cells.length < 4) continue;
+    rows.push({
+      date: cells[idxDate],
+      start: cells[idxStart],
+      end: cells[idxEnd],
+      category: cells[idxCat] || 'Unknown'
+    });
+  }
+  return rows;
+}
+
+function toDateTime(dateStr,timeStr){
+  const dParts=dateStr.split(/[-\/]/);
+  let [y,m,d]=dParts.length===3?dParts:[2025,1,1];
+  const [h,mi]=(timeStr||'0:0').split(':').map(x=>parseInt(x,10));
+  return new Date(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}T${String(h).padStart(2,'0')}:${String(mi||0).padStart(2,'0')}:00`);
+}
+
+function computeDistribution(rows){
+  const grouped={};
+  for(const r of rows){
+    if(!grouped[r.category]) grouped[r.category]=[];
+    grouped[r.category].push(r);
+  }
+  const result={};
+  for(const [cat,arr] of Object.entries(grouped)){
+    const bins=new Array(24).fill(0);
+    let totalMinutes=0;
+    for(const r of arr){
+      let start=toDateTime(r.date,r.start);
+      let end=toDateTime(r.date,r.end);
+      if(end<=start) end=new Date(end.getTime()+24*60*60*1000);
+      let cur=new Date(start);
+      while(cur<end){
+        bins[cur.getHours()]++;
+        totalMinutes++;
+        cur=new Date(cur.getTime()+60000);
+      }
+    }
+    result[cat]={bins,totalMinutes};
+  }
+  return result;
+}
+
+function drawChart(cat,data,color){
+  const mode=modeSelect.value;
+  const bins=data.bins;
+  const total=data.totalMinutes||1;
+  const W=900,H=320,pad={top:20,right:20,bottom:36,left:44};
+  const innerW=W-pad.left-pad.right,innerH=H-pad.top-pad.bottom;
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.setAttribute('width','100%');
+  const tooltip=document.createElement('div');
+  tooltip.className='tooltip';
+  document.body.appendChild(tooltip);
+
+  const maxVal=Math.max(...bins);
+  const yMax=mode==='minutes'?Math.max(10,maxVal):100;
+  const yScale=v=>pad.top+innerH*(1-(mode==='minutes'?v:yVal(v))/yMax);
+  function yVal(v){return (v/total)*100;}
+
+  // grid
+  for(let i=0;i<=5;i++){
+    const val=i*(yMax/5);
+    const y=pad.top+innerH*(1-val/yMax);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',pad.left);line.setAttribute('x2',W-pad.right);
+    line.setAttribute('y1',y);line.setAttribute('y2',y);
+    line.setAttribute('stroke','#f4f4f6');
+    svg.appendChild(line);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',8);t.setAttribute('y',y+4);
+    t.setAttribute('font-size',11);t.setAttribute('fill','#666');
+    t.textContent=mode==='minutes'?Math.round(val)+'m':Math.round(val)+'%';
+    svg.appendChild(t);
+  }
+
+  const barW=innerW/24*0.78,gap=(innerW/24)-barW;
+  for(let h=0;h<24;h++){
+    const x=pad.left+(innerW/24)*h+gap/2;
+    const v=bins[h];
+    const val=mode==='minutes'?v:yVal(v);
+    const y=pad.top+innerH*(1-val/yMax);
+    const height=pad.top+innerH-y;
+    const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',x);rect.setAttribute('y',y);
+    rect.setAttribute('width',barW);rect.setAttribute('height',Math.max(0.1,height));
+    rect.setAttribute('rx',4);rect.setAttribute('ry',4);
+    rect.setAttribute('fill',color);
+    rect.addEventListener('mousemove',e=>{
+      const pct=(v/total*100).toFixed(2);
+      tooltip.style.opacity=1;
+      tooltip.innerHTML=`<b>${String(h).padStart(2,'0')}:00–${String((h+1)%24).padStart(2,'0')}:00</b><br>${v} min (${pct}%)`;
+      tooltip.style.left=e.pageX+'px';
+      tooltip.style.top=e.pageY+'px';
+    });
+    rect.addEventListener('mouseleave',()=>tooltip.style.opacity=0);
+    svg.appendChild(rect);
+
+    const label=document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x',x+barW/2);
+    label.setAttribute('y',pad.top+innerH+16);
+    label.setAttribute('font-size',10);
+    label.setAttribute('fill','#444');
+    label.setAttribute('text-anchor','middle');
+    label.textContent=String(h).padStart(2,'0');
+    svg.appendChild(label);
+  }
+
+  const sumText=document.createElementNS('http://www.w3.org/2000/svg','text');
+  sumText.setAttribute('x',pad.left);
+  sumText.setAttribute('y',H-6);
+  sumText.setAttribute('font-size',11);
+  sumText.setAttribute('fill','#666');
+  sumText.textContent=`Total: ${total} minutes`;
+  svg.appendChild(sumText);
+  return svg;
+}
+
+function drawAll(grouped){
+  chartsContainer.innerHTML='';
+  const cats=Object.keys(grouped);
+  cats.forEach((cat,i)=>{
+    const color=palette[i%palette.length];
+    const title=document.createElement('div');
+    title.className='category-title';
+    title.innerHTML=`<span class="color-box" style="background:${color}"></span>${cat}`;
+    chartsContainer.appendChild(title);
+    const wrap=document.createElement('div');
+    wrap.className='chart-wrap';
+    wrap.appendChild(drawChart(cat,grouped[cat],color));
+    chartsContainer.appendChild(wrap);
+  });
+}
+
+function runCSV(text){
+  allRows=parseCSV(text);
+  lastGrouped=computeDistribution(allRows);
+  drawAll(lastGrouped);
+}
+
+function applyDateFilter(){
+  if(!allRows.length) return;
+  const start=startInput.value?new Date(startInput.value):null;
+  const end=endInput.value?new Date(endInput.value+'T23:59'):null;
+  const filtered=allRows.filter(r=>{
+    const d=new Date(r.date);
+    return (!start||d>=start)&&(!end||d<=end);
+  });
+  lastGrouped=computeDistribution(filtered);
+  drawAll(lastGrouped);
+}
+
+runCSV(exampleCSV);
+</script>
+</body>
+</html>
+
