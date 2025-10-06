@@ -5,7 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Time Distribution (by Category)</title>
 <style>
-  body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 24px; color:#111; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  max-width: 100ch;
+	padding: 2rem;
+  margin-left: auto;
+  margin-right: auto;
+}
   header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:20px; }
   h1 { margin:0; font-size:20px; }
   input[type="file"], input[type="date"] { font-size:14px; padding:4px 6px; border:1px solid #ccc; border-radius:6px; }
@@ -28,8 +35,12 @@
     <div style="font-size:13px;color:#444;">Aggregates minutes per hour; one chart per category.</div>
   </div>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <input id="file" type="file" accept=".csv,text/csv" />
-    <button id="loadExample">Load example CSV</button>
+		<input id="file" type="file" accept=".csv,text/csv" />
+		<button id="reloadCSV">Reload CSV</button>
+		<!--- 		
+			<button id="loadExample">Load example CSV</button> 
+			--->
+
     <label style="font-size:13px;">Mode:
       <select id="mode">
         <option value="minutes">Absolute minutes</option>
@@ -83,6 +94,9 @@ const startInput = document.getElementById('startDate');
 const endInput = document.getElementById('endDate');
 const applyRangeButton = document.getElementById('applyRange');
 
+const reloadButton = document.getElementById('reloadCSV');
+let lastCSVText = '';
+
 let allRows = [];
 let lastGrouped = {};
 
@@ -90,10 +104,26 @@ fileInput.addEventListener('change', e => {
   const f = e.target.files[0];
   if (!f) return;
   const reader = new FileReader();
-  reader.onload = () => runCSV(reader.result);
+  reader.onload = () => {
+    lastCSVText = reader.result;
+    runCSV(lastCSVText);
+  };
   reader.readAsText(f);
 });
-loadExampleButton.addEventListener('click', () => runCSV(exampleCSV));
+
+loadExampleButton.addEventListener('click', () => {
+  lastCSVText = exampleCSV;
+  runCSV(exampleCSV);
+});
+
+reloadButton.addEventListener('click', () => {
+  if (lastCSVText) {
+    runCSV(lastCSVText);
+  } else {
+    alert('No CSV loaded yet.');
+  }
+});
+
 modeSelect.addEventListener('change', () => drawAll(lastGrouped));
 applyRangeButton.addEventListener('click', () => applyDateFilter());
 
@@ -127,30 +157,38 @@ function toDateTime(dateStr,timeStr){
 }
 
 function computeDistribution(rows){
-  const grouped={};
+  const grouped = {};
   for(const r of rows){
-    if(!grouped[r.category]) grouped[r.category]=[];
+    if(!grouped[r.category]) grouped[r.category] = [];
     grouped[r.category].push(r);
   }
-  const result={};
-  for(const [cat,arr] of Object.entries(grouped)){
-    const bins=new Array(24).fill(0);
-    let totalMinutes=0;
+
+  const result = {};
+  for(const [cat, arr] of Object.entries(grouped)){
+    const bins = new Array(24).fill(0);
+    let totalMinutes = 0;
+    const dayTotals = {}; // <---- NEW
+
     for(const r of arr){
-      let start=toDateTime(r.date,r.start);
-      let end=toDateTime(r.date,r.end);
-      if(end<=start) end=new Date(end.getTime()+24*60*60*1000);
-      let cur=new Date(start);
-      while(cur<end){
+      let start = toDateTime(r.date,r.start);
+      let end = toDateTime(r.date,r.end);
+      if(end <= start) end = new Date(end.getTime() + 24*60*60*1000);
+
+      let cur = new Date(start);
+      while(cur < end){
         bins[cur.getHours()]++;
         totalMinutes++;
-        cur=new Date(cur.getTime()+60000);
+        const dateKey = cur.toISOString().split('T')[0];
+        dayTotals[dateKey] = (dayTotals[dateKey] || 0) + 1;
+        cur = new Date(cur.getTime() + 60000);
       }
     }
-    result[cat]={bins,totalMinutes};
+
+    result[cat] = { bins, totalMinutes, dayTotals };
   }
   return result;
 }
+
 
 function drawChart(cat,data,color){
   const mode=modeSelect.value;
@@ -228,6 +266,123 @@ function drawChart(cat,data,color){
   return svg;
 }
 
+function drawHeatmap(cat, data, color) {
+  const dayTotals = data.dayTotals || {};
+  if (Object.keys(dayTotals).length === 0) return document.createTextNode('');
+
+  // Determine date range: last 52 weeks
+  const allDates = Object.keys(dayTotals).map(d => new Date(d));
+  const lastDate = new Date();
+  const end = new Date(lastDate);
+  end.setDate(end.getDate() - end.getDay() + 6); // align to Saturday (end of week)
+  const start = new Date(end);
+  start.setDate(start.getDate() - 7 * 52 + 1); // 52 weeks back
+
+  const W = 52 * 14 + 50;
+  const H = 7 * 14 + 40;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.background = '#fff';
+  svg.style.border = '1px solid #eee';
+  svg.style.borderRadius = '6px';
+  svg.style.marginTop = '4px';
+  svg.style.width = '100%';
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tooltip';
+  document.body.appendChild(tooltip);
+
+  const max = Math.max(...Object.values(dayTotals));
+
+  // color scaling: lighten toward white for low activity
+  function colorScale(v) {
+    if (v === 0) return '#eee';
+    const t = v / max;
+    return shadeColor(color, -60 + t * -20);
+  }
+
+  function shadeColor(col, percent) {
+    const f = parseInt(col.slice(1), 16);
+    const t = percent < 0 ? 0 : 255;
+    const p = Math.abs(percent) / 100;
+    const R = f >> 16, G = f >> 8 & 0x00FF, B = f & 0x0000FF;
+    return (
+      '#' +
+      (
+        0x1000000 +
+        (Math.round((t - R) * p) + R) * 0x10000 +
+        (Math.round((t - G) * p) + G) * 0x100 +
+        (Math.round((t - B) * p) + B)
+      )
+        .toString(16)
+        .slice(1)
+    );
+  }
+
+  // draw 7x52 grid
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  let current = new Date(start);
+  for (let w = 0; w < 52; w++) {
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + w * 7 + d);
+      const key = date.toISOString().split('T')[0];
+      const v = dayTotals[key] || 0;
+      const x = 30 + w * 14;
+      const y = 14 + d * 14;
+
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', x);
+      rect.setAttribute('y', y);
+      rect.setAttribute('width', 12);
+      rect.setAttribute('height', 12);
+      rect.setAttribute('rx', 2);
+      rect.setAttribute('ry', 2);
+      rect.setAttribute('fill', colorScale(v));
+      rect.addEventListener('mousemove', e => {
+        tooltip.style.opacity = 1;
+        tooltip.innerHTML = `<b>${key}</b><br>${v} min`;
+        tooltip.style.left = e.pageX + 'px';
+        tooltip.style.top = e.pageY + 'px';
+      });
+      rect.addEventListener('mouseleave', () => (tooltip.style.opacity = 0));
+      svg.appendChild(rect);
+    }
+  }
+
+  // weekday labels
+  ['M', 'W', 'F'].forEach((d, i) => {
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', 12);
+    t.setAttribute('y', 25 + i * 28 / 1);
+    t.setAttribute('font-size', 9);
+    t.setAttribute('fill', '#666');
+    t.textContent = d;
+    svg.appendChild(t);
+  });
+
+  // year labels (start month and end month)
+  const startMonth = start.toLocaleString('default', { month: 'short' });
+  const endMonth = end.toLocaleString('default', { month: 'short' });
+  const t1 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  t1.setAttribute('x', 30);
+  t1.setAttribute('y', H - 8);
+  t1.setAttribute('font-size', 10);
+  t1.setAttribute('fill', '#666');
+  t1.textContent = startMonth;
+  svg.appendChild(t1);
+  const t2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  t2.setAttribute('x', W - 40);
+  t2.setAttribute('y', H - 8);
+  t2.setAttribute('font-size', 10);
+  t2.setAttribute('fill', '#666');
+  t2.textContent = endMonth;
+  svg.appendChild(t2);
+
+  return svg;
+}
+
+
 function drawAll(grouped){
   chartsContainer.innerHTML='';
   const cats=Object.keys(grouped);
@@ -241,6 +396,11 @@ function drawAll(grouped){
     wrap.className='chart-wrap';
     wrap.appendChild(drawChart(cat,grouped[cat],color));
     chartsContainer.appendChild(wrap);
+
+		const heatmapWrap = document.createElement('div');
+		heatmapWrap.className = 'chart-wrap';
+		heatmapWrap.appendChild(drawHeatmap(cat, grouped[cat], color));
+		chartsContainer.appendChild(heatmapWrap);
   });
 }
 
