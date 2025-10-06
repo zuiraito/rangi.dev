@@ -19,7 +19,6 @@ body {
   button, select { padding:8px 10px; border-radius:8px; border:1px solid #ccc; background:#f7f7f8; cursor:pointer; }
   button:active{ transform:translateY(1px); }
   .chart-wrap { width:100%; max-width:900px; margin-top:24px; }
-  svg { width:100%; height:360px; background:linear-gradient(180deg,#fff,#fbfbfc); border:1px solid #eee; border-radius:8px; }
   .tooltip { position:absolute; pointer-events:none; background:#222; color:#fff; padding:6px 8px; border-radius:6px; font-size:13px; opacity:0; transition:opacity .12s; transform:translate(-50%,-110%);}
   .category-title { font-size:18px; font-weight:600; margin-top:30px; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
   .color-box { width:14px; height:14px; border-radius:3px; }
@@ -50,7 +49,7 @@ body {
     <label style="font-size:13px;">From: <input type="date" id="startDate"></label>
     <label style="font-size:13px;">To: <input type="date" id="endDate"></label>
     <button id="applyRange">Apply</button>
-  </div>
+   </div>
 </header>
 
 <div id="charts"></div>
@@ -382,27 +381,255 @@ function drawHeatmap(cat, data, color) {
   return svg;
 }
 
+function drawCalendar(cat, data, color) {
+  const rows = allRows.filter(r => r.category === cat);
+  if (!rows.length) return document.createTextNode('');
+
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 29); // last 30 days
+  const W = 900, H = 850, pad = { top: 20, right: 20, bottom: 30, left: 40 };
+  const innerW = W - pad.left - pad.right;
+  const innerH = H - pad.top - pad.bottom;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.background = '#fff';
+  svg.style.border = '1px solid #eee';
+  svg.style.borderRadius = '8px';
+  svg.style.marginTop = '4px';
+  svg.style.width = '100%';
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tooltip';
+  document.body.appendChild(tooltip);
+
+  const dayWidth = innerW / 30;
+  const hourHeight = innerH / 24;
+
+  // vertical grid lines (days)
+  for (let i=0; i<=30; i++){
+    const x = pad.left + i*dayWidth;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x); line.setAttribute('x2', x);
+    line.setAttribute('y1', pad.top); line.setAttribute('y2', pad.top+innerH);
+    line.setAttribute('stroke','#f4f4f6');
+    svg.appendChild(line);
+    if(i<30){
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate()+i);
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', x+dayWidth/2);
+      t.setAttribute('y', H-6);
+      t.setAttribute('font-size',9);
+      t.setAttribute('fill','#666');
+      t.setAttribute('text-anchor','middle');
+      t.textContent = date.toISOString().slice(5,10); // MM-DD
+      svg.appendChild(t);
+    }
+  }
+
+  // horizontal grid lines (hours)
+  for(let h=0; h<=24; h++){
+    const y = pad.top + h*hourHeight;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', pad.left); line.setAttribute('x2', pad.left+innerW);
+    line.setAttribute('y1', y); line.setAttribute('y2', y);
+    line.setAttribute('stroke','#f4f4f6');
+    svg.appendChild(line);
+    if(h<24){
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', 2);
+      t.setAttribute('y', y+hourHeight/2+3);
+      t.setAttribute('font-size',9);
+      t.setAttribute('fill','#666');
+      t.textContent = String(h).padStart(2,'0') + ':00';
+      svg.appendChild(t);
+    }
+  }
+
+  // draw activities
+  rows.forEach(r=>{
+    let start = toDateTime(r.date,r.start);
+    let end = toDateTime(r.date,r.end);
+    if(end <= start) end = new Date(end.getTime() + 24*60*60*1000);
+
+    // skip if outside last 30 days
+    if(end < startDate) return;
+    if(start > today) return;
+
+    const dayIndex = Math.floor((start - startDate)/(24*60*60*1000));
+    const x = pad.left + dayIndex * dayWidth;
+    const yStart = pad.top + start.getHours() * hourHeight + start.getMinutes()/60*hourHeight;
+    const yEnd = pad.top + end.getHours() * hourHeight + end.getMinutes()/60*hourHeight;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', x+1);
+    rect.setAttribute('y', yStart);
+    rect.setAttribute('width', dayWidth-2);
+    rect.setAttribute('height', Math.max(yEnd-yStart, 1));
+    rect.setAttribute('rx',2); rect.setAttribute('ry',2);
+    rect.setAttribute('fill', color);
+    rect.addEventListener('mousemove', e=>{
+      tooltip.style.opacity=1;
+      tooltip.innerHTML=`<b>${r.date}</b><br>${r.start}–${r.end}`;
+      tooltip.style.left = e.pageX+'px';
+      tooltip.style.top = e.pageY+'px';
+    });
+    rect.addEventListener('mouseleave', ()=>tooltip.style.opacity=0);
+    svg.appendChild(rect);
+  });
+
+  return svg;
+}
+
+function drawCombinedCalendar(rows) {
+  if (!rows.length) return document.createTextNode('');
+
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 29); // last 30 days
+  const W = 900, H = 850, pad = { top: 20, right: 20, bottom: 30, left: 40 };
+  const innerW = W - pad.left - pad.right;
+  const innerH = H - pad.top - pad.bottom;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.background = '#fff';
+  svg.style.border = '1px solid #eee';
+  svg.style.borderRadius = '8px';
+  svg.style.width = '100%';
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tooltip';
+  document.body.appendChild(tooltip);
+
+  const dayWidth = innerW / 30;
+  const hourHeight = innerH / 24;
+
+  // Map categories to colors
+  const categories = [...new Set(rows.map(r => r.category))];
+  const catColor = {};
+  categories.forEach((c,i)=> catColor[c] = palette[i%palette.length]);
+
+  // vertical grid lines (days)
+  for (let i=0; i<=30; i++){
+    const x = pad.left + i*dayWidth;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x); line.setAttribute('x2', x);
+    line.setAttribute('y1', pad.top); line.setAttribute('y2', pad.top+innerH);
+    line.setAttribute('stroke','#f4f4f6');
+    svg.appendChild(line);
+
+    if(i<30){
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate()+i);
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', x+dayWidth/2);
+      t.setAttribute('y', H-6);
+      t.setAttribute('font-size',9);
+      t.setAttribute('fill','#666');
+      t.setAttribute('text-anchor','middle');
+      t.textContent = date.toISOString().slice(5,10); // MM-DD
+      svg.appendChild(t);
+    }
+  }
+
+  // horizontal grid lines (hours)
+  for(let h=0; h<=24; h++){
+    const y = pad.top + h*hourHeight;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', pad.left); line.setAttribute('x2', pad.left+innerW);
+    line.setAttribute('y1', y); line.setAttribute('y2', y);
+    line.setAttribute('stroke','#f4f4f6');
+    svg.appendChild(line);
+
+    if(h<24){
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', 2);
+      t.setAttribute('y', y+hourHeight/2+3);
+      t.setAttribute('font-size',9);
+      t.setAttribute('fill','#666');
+      t.textContent = String(h).padStart(2,'0') + ':00';
+      svg.appendChild(t);
+    }
+  }
+
+  // draw activities
+  rows.forEach(r=>{
+    let start = toDateTime(r.date,r.start);
+    let end = toDateTime(r.date,r.end);
+    if(end <= start) end = new Date(end.getTime() + 24*60*60*1000);
+
+    // skip if outside last 30 days
+    if(end < startDate) return;
+    if(start > today) return;
+
+    const dayIndex = Math.floor((start - startDate)/(24*60*60*1000));
+    const x = pad.left + dayIndex * dayWidth;
+    const yStart = pad.top + start.getHours() * hourHeight + start.getMinutes()/60*hourHeight;
+    const yEnd = pad.top + end.getHours() * hourHeight + end.getMinutes()/60*hourHeight;
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', x+1);
+    rect.setAttribute('y', yStart);
+    rect.setAttribute('width', dayWidth-2);
+    rect.setAttribute('height', Math.max(yEnd-yStart, 1));
+    rect.setAttribute('rx',2); rect.setAttribute('ry',2);
+    rect.setAttribute('fill', catColor[r.category]);
+    rect.addEventListener('mousemove', e=>{
+      tooltip.style.opacity=1;
+      tooltip.innerHTML=`<b>${r.date}</b><br>${r.start}–${r.end} (${r.category})`;
+      tooltip.style.left = e.pageX+'px';
+      tooltip.style.top = e.pageY+'px';
+    });
+    rect.addEventListener('mouseleave', ()=>tooltip.style.opacity=0);
+    svg.appendChild(rect);
+  });
+
+  return svg;
+}
 
 function drawAll(grouped){
   chartsContainer.innerHTML='';
   const cats=Object.keys(grouped);
   cats.forEach((cat,i)=>{
     const color=palette[i%palette.length];
+
     const title=document.createElement('div');
     title.className='category-title';
     title.innerHTML=`<span class="color-box" style="background:${color}"></span>${cat}`;
     chartsContainer.appendChild(title);
+
     const wrap=document.createElement('div');
     wrap.className='chart-wrap';
     wrap.appendChild(drawChart(cat,grouped[cat],color));
     chartsContainer.appendChild(wrap);
 
-		const heatmapWrap = document.createElement('div');
-		heatmapWrap.className = 'chart-wrap';
-		heatmapWrap.appendChild(drawHeatmap(cat, grouped[cat], color));
-		chartsContainer.appendChild(heatmapWrap);
+    const heatmapWrap = document.createElement('div');
+    heatmapWrap.className='chart-wrap';
+    heatmapWrap.appendChild(drawHeatmap(cat, grouped[cat], color));
+    chartsContainer.appendChild(heatmapWrap);
+
+    const calDetails = document.createElement('details');
+    calDetails.style.marginTop = '12px';
+    const summary = document.createElement('summary');
+    summary.textContent = 'Show calendar';
+    summary.style.cursor = 'pointer';
+		summary.style.color= 'gray';
+    summary.style.fontSize = '14px';
+    calDetails.appendChild(summary);
+
+    const calWrap = document.createElement('div');
+    calWrap.className = 'chart-wrap';
+    calWrap.appendChild(drawCalendar(cat, grouped[cat], color));
+    calDetails.appendChild(calWrap);
+
+    chartsContainer.appendChild(calDetails);
   });
+	const combinedWrap = document.createElement('div');
+	combinedWrap.className='chart-wrap';
+	combinedWrap.appendChild(drawCombinedCalendar(allRows));
+	chartsContainer.appendChild(combinedWrap);
 }
+
 
 function runCSV(text){
   allRows=parseCSV(text);
