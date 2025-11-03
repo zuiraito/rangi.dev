@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rangi Math Renderer</title>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        background: #f8f9fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    body.centered-only {
+        background: white;
+    }
+    #container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 95%;
+        max-width: 600px;
+    }
+    textarea {
+        width: 180%;
+        min-height: 500px;
+        resize: vertical;
+        padding: 10px;
+        font-size: 1.1em;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+        font-family: monospace;
+    }
+    button {
+        padding: 10px 20px;
+        font-size: 1.1em;
+        border: none;
+        border-radius: 8px;
+        background: #007bff;
+        color: white;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin: 5px;
+    }
+    button:hover {
+        background: #0056b3;
+    }
+    #rendered {
+        margin-top: 20px;
+        font-size: 1.5em;
+        text-align: center;
+        word-break: break-word;
+    }
+</style>
+</head>
+<body>
+<div id="container">
+    <textarea id="latex-input" placeholder="Enter LaTeX here…"></textarea>
+    <div>
+        <button onclick="copyLink()">Copy Link</button>
+    </div>
+    <div id="rendered"></div>
+</div>
+
+<script>
+function renderMath(latex) {
+    const container = document.getElementById("rendered");
+    container.innerHTML = `\\[${latex}\\]`; // display mode
+    if (window.MathJax) {
+        MathJax.typesetPromise([container]);
+    }
+}
+
+function handleRender() {
+    const input = document.getElementById("latex-input").value;
+    const encoded = encodeURIComponent(input);
+    window.history.replaceState(null, "", `?latex=${encoded}`);
+    renderMath(input);
+}
+
+function copyLink() {
+    const input = document.getElementById("latex-input").value;
+    const encoded = encodeURIComponent(input);
+    const url = `${location.origin}${location.pathname}?renderOnly=1&latex=${encoded}`;
+    navigator.clipboard.writeText(url).then(() => {
+        alert("Link copied to clipboard!");
+    });
+}
+const textarea = document.getElementById("latex-input");
+
+// Render whenever the input changes
+textarea.addEventListener("input", () => {
+    const value = textarea.value;
+    const encoded = encodeURIComponent(value);
+    window.history.replaceState(null, "", `?latex=${encoded}`);
+    renderMath(value);
+});
+
+
+// On page load, check for query string
+window.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(location.search);
+    const latex = params.get("latex");
+    const renderOnly = params.get("renderOnly");
+
+if (latex && renderOnly) {
+
+    document.body.classList.add("centered-only");
+    document.body.style.margin = "0";
+    document.body.style.width = "100vw";
+    document.body.style.height = "100vh";
+    document.body.style.display = "flex";
+    document.body.style.justifyContent = "center";
+    document.body.style.alignItems = "center";
+    document.body.style.background = "white";
+    document.body.innerHTML = `<div id="rendered" style="font-size:2em; width: 100%; text-align: center;">\\[${latex}\\]</div>`;
+    if (window.MathJax) MathJax.typesetPromise([document.getElementById("rendered")]);
+   } else if (latex) {
+        // Show input box + render button + rendered math
+        document.getElementById("latex-input").value = latex;
+        renderMath(latex);
+    }
+});
+</script>
+</body>
+</html>
+
