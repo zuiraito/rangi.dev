@@ -4,7 +4,13 @@
 <meta charset="UTF-8">
 <title>math thingy</title>
 <link rel="icon" type="image/jpg" href="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.pinimg.com%2F736x%2F98%2F6e%2F22%2F986e22dac6890e26591215cc0754c815--homework-adorable-animals.jpg" sizes="32x32">
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+  svg: { fontCache: 'none' }, // ensure SVG is self-contained
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <style>
     html, body {
         height: 100%;
@@ -27,7 +33,7 @@
     }
     textarea {
         width: 100%;
-        min-height: 500px;
+        min-height: 100px;
         resize: vertical;
         padding: 10px;
         font-size: 1.1em;
@@ -57,24 +63,31 @@
         text-align: center;
         word-break: break-word;
     }
+.button-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap; 
+}
+
 </style>
 </head>
 <body>
 <div id="container">
-    <textarea id="latex-input" placeholder="Enter LaTeX here…"></textarea>
-    <div>
-        <button onclick="copyLink()">Copy Link</button>
-    </div>
     <div id="rendered"></div>
+    <textarea id="latex-input" placeholder="Enter LaTeX here…"></textarea>
+    <div class="button-row">
+        <button onclick="downloadImage('svg')">SVG</button>
+        <button onclick="downloadImage('png')">PNG</button>
+        <button onclick="copyLink()">Link to Render</button>
+    </div>
 </div>
 
 <script>
 function renderMath(latex) {
     const container = document.getElementById("rendered");
     container.innerHTML = `\\[${latex}\\]`; // display mode
-    if (window.MathJax) {
-        MathJax.typesetPromise([container]);
-    }
+    if (window.MathJax) MathJax.typesetPromise([container]);
 }
 
 function handleRender() {
@@ -92,9 +105,54 @@ function copyLink() {
         alert("Link copied to clipboard!");
     });
 }
-const textarea = document.getElementById("latex-input");
 
-// Render whenever the input changes
+// Download SVG or PNG
+function downloadImage(format) {
+    const svgElem = document.querySelector("#rendered svg");
+    if (!svgElem) {
+        alert("Render math first!");
+        return;
+    }
+
+    const latex = document.getElementById("latex-input").value.trim();
+    const encoded = encodeURIComponent(latex);
+    const filename = `rangi.dev-m?latex=${encoded}.${format}`;
+
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgElem);
+
+    if (format === "svg") {
+        const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+    } else if (format === "png") {
+        const img = new Image();
+        const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(svgBlob);
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width * 2;
+            canvas.height = img.height * 2;
+            const ctx = canvas.getContext("2d");
+            ctx.scale(2, 2);
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(url);
+            canvas.toBlob(blob => {
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+            }, "image/png");
+        };
+        img.src = url;
+    }
+}
+
+const textarea = document.getElementById("latex-input");
 textarea.addEventListener("input", () => {
     const value = textarea.value;
     const encoded = encodeURIComponent(value);
@@ -102,27 +160,23 @@ textarea.addEventListener("input", () => {
     renderMath(value);
 });
 
-
-// On page load, check for query string
 window.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(location.search);
     const latex = params.get("latex");
     const renderOnly = params.get("renderOnly");
 
-if (latex && renderOnly) {
-
-    document.body.classList.add("centered-only");
-    document.body.style.margin = "0";
-    document.body.style.width = "100vw";
-    document.body.style.height = "100vh";
-    document.body.style.display = "flex";
-    document.body.style.justifyContent = "center";
-    document.body.style.alignItems = "center";
-    document.body.style.background = "white";
-    document.body.innerHTML = `<div id="rendered" style="font-size:2em; width: 100%; text-align: center;">\\[${latex}\\]</div>`;
-    if (window.MathJax) MathJax.typesetPromise([document.getElementById("rendered")]);
-   } else if (latex) {
-        // Show input box + render button + rendered math
+    if (latex && renderOnly) {
+        document.body.classList.add("centered-only");
+        document.body.style.margin = "0";
+        document.body.style.width = "100vw";
+        document.body.style.height = "100vh";
+        document.body.style.display = "flex";
+        document.body.style.justifyContent = "center";
+        document.body.style.alignItems = "center";
+        document.body.style.background = "white";
+        document.body.innerHTML = `<div id="rendered" style="font-size:2em; width: 100%; text-align: center;">\\[${latex}\\]</div>`;
+        if (window.MathJax) MathJax.typesetPromise([document.getElementById("rendered")]);
+    } else if (latex) {
         document.getElementById("latex-input").value = latex;
         renderMath(latex);
     }
