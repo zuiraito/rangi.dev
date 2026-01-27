@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PGP</title>
+</head>
+<body>
+    <h1>What is PGP</h1>
+    <p>(Wikipedia) Pretty Good Privacy (PGP) is an encryption program that provides cryptographic privacy and authentication for data communication. PGP is used for signing, encrypting, and decrypting texts, e-mails, files, directories, and whole disk partitions and to increase the security of e-mail communications. Phil Zimmermann developed PGP in 1991.</p>
+
+    <h1>Get Started with PGP</h1>
+    <p>This guide is meant for linux users (i will add MacOS and Windows in the future) using the gpg (GNU Pricacy Guard) package.</p>
+    <h2>1. Generate Your Key Pair</h2>
+    <p>First, create your public and private keys:</p>
+    <pre>gpg --full-generate-key</pre>
+    <p>For just getting started:</p>
+    <ul>
+        <li>Choose RSA and RSA (default)</li>
+        <li>Key size: 2048 or 4096 bits</li>
+        <li>Set expiration (or choose no expiration)</li>
+        <li>Enter your name and email</li>
+        <li>Create a strong passphrase</li>
+    </ul>
+
+    <h2>2. List Your Keys</h2>
+    <p>Verify your key was created:</p>
+    <pre>gpg --list-keys</pre>
+
+    <h2>3. Export Your Public Key</h2>
+    <pre>gpg --armor --export your@email.com</pre>
+    <p>Share your public key with people who want to send you encrypted messages:</p>
+    <p>You can then share the contents of <code>public-key.asc</code> with others.</p>
+    <pre>gpg --armor --export your@email.com > public-key.asc</pre>
+
+    <h2>4. Import Someone's Public Key</h2>
+    <p>Before you can encrypt a message for someone, you need their public key:</p>
+    <pre>gpg --import their-public-key.asc</pre>
+
+    <h2>5. Encrypt a Message</h2>
+    <p>Encrypt a message for someone (you'll need their email address from their key):</p>
+    <pre>echo "Your secret message here" | gpg --armor --encrypt --recipient their@email.com</pre>
+    <p>Or encrypt a file:</p>
+    <pre>gpg --armor --encrypt --recipient their@email.com message.txt</pre>
+    <p>The encrypted output starts with <code>-----BEGIN PGP MESSAGE-----</code> and can be copy-pasted into a chat.</p>
+
+    <h2>6. Decrypt a Message</h2>
+    <p>When you receive an encrypted message, decrypt it with:</p>
+    <pre>gpg --decrypt encrypted-message.asc</pre>
+    <p>Or paste the encrypted text directly:</p>
+    <pre>echo "-----BEGIN PGP MESSAGE-----
+...
+-----END PGP MESSAGE-----" | gpg --decrypt</pre>
+    <p>You'll be prompted for your passphrase.</p>
+
+    <h2>Quick Reference</h2>
+    <table border="1">
+        <tr>
+            <th>Command</th>
+            <th>Purpose</th>
+        </tr>
+        <tr>
+            <td><code>gpg --list-keys</code></td>
+            <td>List all public keys</td>
+        </tr>
+        <tr>
+            <td><code>gpg --list-secret-keys</code></td>
+            <td>List your private keys</td>
+        </tr>
+        <tr>
+            <td><code>gpg --delete-key EMAIL</code></td>
+            <td>Delete a public key</td>
+        </tr>
+        <tr>
+            <td><code>gpg --armor --export EMAIL</code></td>
+            <td>Export public key to terminal</td>
+        </tr>
+    </table>
+
+    <h2>Security Tips</h2>
+    <ul>
+        <li>Keep your private key secure - never share it</li>
+        <li>Use a strong passphrase for your private key</li>
+        <li>Only your public key should be shared</li>
+        <li>Verify key fingerprints through a separate channel when possible</li>
+    </ul>
+
+</body>
+</html>
