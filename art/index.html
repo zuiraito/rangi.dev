@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Art Collection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Times New Roman', serif;
+            background: #fff;
+            color: #000;
+            font-size: 125%; /* Scale up font size instead of transform */
+        }
+
+        .container {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            border-right: 1px solid #ccc;
+            padding: 20px;
+            flex-shrink: 0;
+        }
+
+        .sidebar h2 {
+            font-size: 26px;
+            margin-bottom: 10px;
+        }
+
+        .selected-tags {
+            min-height: 20px;
+            margin-bottom: 10px;
+        }
+
+        .no-selection {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .selected-tag {
+            display: inline-block;
+            background: #000;
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 13px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            border-radius: 3px;
+        }
+
+        .selected-tag.anti-tag {
+            background: #c92a2a;
+        }
+
+        .selected-tag .remove {
+            margin-left: 6px;
+            cursor: pointer;
+        }
+
+        .anti-tag-count {
+            color: #999;
+            font-size: 12px;
+            font-style: italic;
+            display: inline-block;
+            margin-left: 5px;
+        }
+
+        .clear-all {
+            color: #000;
+            text-decoration: underline;
+            font-size: 13px;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .tag-list {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag-list li {
+            display: inline-block;
+        }
+
+        .tag-list a {
+            color: #000;
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-block;
+            padding: 4px 8px;
+            border: 1px solid #000;
+        }
+
+        .tag-list a.selected {
+            background: #ddd;
+            color: #666;
+            border-color: #999;
+        }
+
+        .tag-count {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .anti-tag-list {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .anti-tag-list li {
+            display: inline-block;
+        }
+
+        .anti-tag-list a {
+            color: #c92a2a;
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-block;
+            padding: 4px 8px;
+            border: 1px solid #c92a2a;
+            border-radius: 0;
+            transition: all 0.2s;
+        }
+
+        .anti-tag-list a:hover {
+            background: #ffe0e0;
+        }
+
+        .anti-tag-list a.selected {
+            background: #c92a2a;
+            color: white;
+            border-color: #c92a2a;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .header h1 {
+            font-size: 30px;
+            margin-bottom: 5px;
+        }
+
+        .image-count {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .gallery-item {
+            background: #fff;
+            border: 1px solid #000;
+            cursor: pointer;
+            height: 440px;
+        }
+
+        .gallery-item img {
+            height: 400px;
+            width: auto;
+            display: block;
+        }
+
+        .gallery-item-info {
+            padding: 6px;
+            font-size: 12px;
+            height: 40px;
+            overflow: hidden;
+        }
+
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lightbox img {
+            width: 100%;
+            height: 80vh;
+            object-fit: contain;
+        }
+
+        .lightbox-info {
+            background: #fff;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .lightbox-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .lightbox-text {
+            font-size: 13px;
+            margin-bottom: 10px;
+            line-height: 1.5;
+            color: #333;
+        }
+
+        .lightbox-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .lightbox-tags span {
+            background: #ddd;
+            padding: 3px 6px;
+            font-size: 12px;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #fff;
+            font-size: 30px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            z-index: 1001;
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            color: #333;
+            font-size: 30px;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            transition: background 0.2s;
+            z-index: 1001;
+        }
+
+        .lightbox-nav:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .lightbox-prev {
+            left: 20px;
+        }
+
+        .lightbox-next {
+            right: 20px;
+        }
+
+        .lightbox-random {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            color: #333;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+            z-index: 1001;
+        }
+
+        .lightbox-random:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .loading {
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <h2>Selected Tags</h2>
+            <div id="selectedTags" class="selected-tags">
+                <span class="no-selection">None</span>
+            </div>
+	    <span style="color: gray; font-size: 12px;">Use Ctrl-F to search tags</span>
+            <a href="#" id="clearAll" class="clear-all" style="display: none;">Clear</a>
+            
+            <h2>Tags</h2>
+            <ul class="tag-list" id="tagList">
+                <li><a href="#" class="tag-link" data-tag="all">All <span class="tag-count" id="count-all">(0)</span></a></li>
+            </ul>
+
+            <h2 style="margin-top: 25px;">Anti-Tags</h2>
+            <ul class="anti-tag-list" id="antiTagList">
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="header">
+                <h1>Definitely not Stolen Art Collection</h1>
+                <p class="image-count"><span id="imageCount">0</span> images</p>
+            </div>
+
+            <div class="gallery" id="gallery">
+                <div class="loading">Loading...</div>
+            </div>
+        </main>
+    </div>
+
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+        <button class="lightbox-nav lightbox-prev" onclick="navigateLightbox('prev')">&lt;</button>
+        <button class="lightbox-nav lightbox-next" onclick="navigateLightbox('next')">&gt;</button>
+        <button class="lightbox-random" onclick="navigateLightbox('random')">Random</button>
+        <div class="lightbox-content">
+            <img id="lightboxImg" src="" alt="">
+            <div class="lightbox-info">
+                <div class="lightbox-title" id="lightboxTitle"></div>
+                <div class="lightbox-text" id="lightboxText"></div>
+                <div class="lightbox-tags" id="lightboxTags"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let images = [];
+        let selectedTags = [];
+        let antiTags = []; // Array to store anti-tags (excluded tags)
+        let currentLightboxIndex = -1; // Track current image in lightbox
+        let currentFilteredImages = []; // Track currently displayed images
+        const IMAGES_DIR = 'images/';
+
+        async function loadData() {
+            try {
+                const response = await fetch('data.json');
+                images = await response.json();
+                buildTagList();
+                renderGallery();
+            } catch (error) {
+                document.getElementById('gallery').innerHTML = '<div class="loading">Error loading data.json</div>';
+            }
+        }
+
+        function buildTagList() {
+            const tagCounts = {};
+            images.forEach(img => {
+                img.tags.forEach(tag => {
+                    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+                });
+            });
+
+            const allTags = Object.keys(tagCounts);
+            const tagList = document.getElementById('tagList');
+            const antiTagList = document.getElementById('antiTagList');
+            document.getElementById('count-all').textContent = `(${images.length})`;
+
+            // Build regular tags
+            allTags.forEach(tag => {
+                const li = document.createElement('li');
+                li.setAttribute('data-tag', tag);
+                li.innerHTML = `<a href="#" class="tag-link" data-tag="${tag}">${tag} <span class="tag-count" data-total="${tagCounts[tag]}">(${tagCounts[tag]})</span></a>`;
+                tagList.appendChild(li);
+            });
+
+            // Build anti-tags
+            allTags.forEach(tag => {
+                const li = document.createElement('li');
+                li.setAttribute('data-tag', tag);
+                li.innerHTML = `<a href="#" class="anti-tag-link" data-tag="${tag}">${tag} <span class="tag-count" data-total="${tagCounts[tag]}">(${tagCounts[tag]})</span></a>`;
+                antiTagList.appendChild(li);
+            });
+
+            // Tag click listeners
+            document.querySelectorAll('.tag-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const tag = this.getAttribute('data-tag');
+                    
+                    if (tag === 'all') {
+                        selectedTags = [];
+                    } else {
+                        if (selectedTags.includes(tag)) {
+                            selectedTags = selectedTags.filter(t => t !== tag);
+                        } else {
+                            selectedTags.push(tag);
+                        }
+                    }
+                    
+                    updateSelectedTagsDisplay();
+                    updateTagCounts();
+                    renderGallery();
+                });
+            });
+
+            // Anti-tag click listeners
+            document.querySelectorAll('.anti-tag-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const tag = this.getAttribute('data-tag');
+                    
+                    if (antiTags.includes(tag)) {
+                        antiTags = antiTags.filter(t => t !== tag);
+                    } else {
+                        antiTags.push(tag);
+                    }
+                    
+                    updateSelectedTagsDisplay();
+                    updateAntiTagsDisplay();
+                    updateTagCounts();
+                    renderGallery();
+                });
+            });
+
+            document.getElementById('clearAll').addEventListener('click', function(e) {
+                e.preventDefault();
+                selectedTags = [];
+                antiTags = [];
+                updateSelectedTagsDisplay();
+                updateAntiTagsDisplay();
+                updateTagCounts();
+                renderGallery();
+            });
+
+            updateTagCounts();
+        }
+
+        function updateSelectedTagsDisplay() {
+            const selectedTagsDiv = document.getElementById('selectedTags');
+            const clearAllLink = document.getElementById('clearAll');
+            
+            if (selectedTags.length === 0 && antiTags.length === 0) {
+                selectedTagsDiv.innerHTML = '<span class="no-selection">None</span>';
+                clearAllLink.style.display = 'none';
+            } else {
+                let html = '';
+                
+                // Add regular tags
+                html += selectedTags.map(tag => 
+                    `<span class="selected-tag">${tag}<span class="remove" onclick="removeTag('${tag}')">×</span></span>`
+                ).join('');
+                
+                // Add anti-tag count if any (but don't show individual anti-tags)
+                if (antiTags.length > 0) {
+                    html += `<span class="anti-tag-count">${antiTags.length} anti-tag${antiTags.length > 1 ? 's' : ''} selected</span>`;
+                }
+                
+                selectedTagsDiv.innerHTML = html;
+                clearAllLink.style.display = 'block';
+            }
+        }
+
+        function removeTag(tag) {
+            selectedTags = selectedTags.filter(t => t !== tag);
+            updateSelectedTagsDisplay();
+            updateTagCounts();
+            renderGallery();
+        }
+
+        function removeAntiTag(tag) {
+            antiTags = antiTags.filter(t => t !== tag);
+            updateSelectedTagsDisplay();
+            updateAntiTagsDisplay();
+            updateTagCounts();
+            renderGallery();
+        }
+
+        function updateAntiTagsDisplay() {
+            const antiTagList = document.getElementById('antiTagList');
+            const antiTagLinks = antiTagList.querySelectorAll('.anti-tag-link');
+            
+            antiTagLinks.forEach(link => {
+                const tag = link.getAttribute('data-tag');
+                if (antiTags.includes(tag)) {
+                    link.classList.add('selected');
+                } else {
+                    link.classList.remove('selected');
+                }
+            });
+        }
+
+        function updateTagCounts() {
+            const tagList = document.getElementById('tagList');
+            const tagItems = Array.from(tagList.querySelectorAll('li[data-tag]'));
+            
+            const tagData = tagItems.map(li => {
+                const tag = li.getAttribute('data-tag');
+                const totalCount = parseInt(li.querySelector('.tag-count').getAttribute('data-total'));
+                const link = li.querySelector('.tag-link');
+                
+                if (selectedTags.includes(tag)) {
+                    link.classList.add('selected');
+                } else {
+                    link.classList.remove('selected');
+                }
+                
+                let matchCount;
+                if (selectedTags.length === 0) {
+                    matchCount = images.filter(img => img.tags.includes(tag)).length;
+                } else {
+                    matchCount = images.filter(img => 
+                        selectedTags.every(selectedTag => img.tags.includes(selectedTag)) && 
+                        img.tags.includes(tag)
+                    ).length;
+                }
+                
+                return { li, tag, matchCount, totalCount };
+            });
+            
+            tagData.sort((a, b) => {
+                if (b.matchCount !== a.matchCount) {
+                    return b.matchCount - a.matchCount;
+                }
+                return a.tag.localeCompare(b.tag);
+            });
+            
+            tagData.forEach(({ li, matchCount, totalCount }) => {
+                const countSpan = li.querySelector('.tag-count');
+                if (selectedTags.length === 0) {
+                    countSpan.textContent = `(${totalCount})`;
+                } else {
+                    countSpan.textContent = `(${matchCount}/${totalCount})`;
+                }
+                tagList.appendChild(li);
+            });
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('gallery');
+            
+            let filteredImages;
+            
+            if (selectedTags.length === 0) {
+                filteredImages = images;
+            } else {
+                filteredImages = images.filter(img => 
+                    selectedTags.every(tag => img.tags.includes(tag))
+                );
+            }
+            
+            // Apply anti-tag filtering (exclude images with anti-tags)
+            if (antiTags.length > 0) {
+                filteredImages = filteredImages.filter(img =>
+                    !antiTags.some(antiTag => img.tags.includes(antiTag))
+                );
+            }
+            
+            currentFilteredImages = filteredImages;
+            
+            if (currentFilteredImages.length === 0) {
+                gallery.innerHTML = '<div class="loading">No images found.</div>';
+                document.getElementById('imageCount').textContent = '0';
+                return;
+            }
+
+            // Reverse to show newest (highest ID) first
+            const reversedImages = [...currentFilteredImages].reverse();
+
+            gallery.innerHTML = reversedImages.map(img => `
+                <div class="gallery-item" onclick="openLightbox(${img.id})">
+                    <img src="${IMAGES_DIR}${img.filename}" alt="${img.title}">
+                    <div class="gallery-item-info">
+                        <strong>${img.title}</strong>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('imageCount').textContent = currentFilteredImages.length;
+        }
+
+        function openLightbox(imageId) {
+            const img = images.find(i => i.id === imageId);
+            if (!img) return;
+            
+            // Find index in currently filtered images
+            currentLightboxIndex = currentFilteredImages.findIndex(i => i.id === imageId);
+            
+            displayLightboxImage(img);
+            document.getElementById('lightbox').classList.add('active');
+        }
+
+        function displayLightboxImage(img) {
+            document.getElementById('lightboxImg').src = IMAGES_DIR + img.filename;
+            document.getElementById('lightboxTitle').textContent = img.title;
+            
+            // Display optional text field if it exists
+            const textElement = document.getElementById('lightboxText');
+            if (img.text) {
+                textElement.textContent = img.text;
+                textElement.style.display = 'block';
+            } else {
+                textElement.style.display = 'none';
+            }
+            
+            document.getElementById('lightboxTags').innerHTML = img.tags.map(t => `<span>${t}</span>`).join('');
+        }
+
+        function navigateLightbox(direction) {
+            if (currentFilteredImages.length === 0) return;
+            
+            if (direction === 'next') {
+                currentLightboxIndex = (currentLightboxIndex + 1) % currentFilteredImages.length;
+            } else if (direction === 'prev') {
+                currentLightboxIndex = (currentLightboxIndex - 1 + currentFilteredImages.length) % currentFilteredImages.length;
+            } else if (direction === 'random') {
+                currentLightboxIndex = Math.floor(Math.random() * currentFilteredImages.length);
+            }
+            
+            displayLightboxImage(currentFilteredImages[currentLightboxIndex]);
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+
+        document.getElementById('lightbox').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeLightbox();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (document.getElementById('lightbox').classList.contains('active')) {
+                if (e.key === 'Escape') {
+                    closeLightbox();
+                } else if (e.key === 'ArrowRight') {
+                    navigateLightbox('next');
+                } else if (e.key === 'ArrowLeft') {
+                    navigateLightbox('prev');
+                } else if (e.key === 'r' || e.key === 'R') {
+                    navigateLightbox('random');
+                }
+            }
+        });
+
+        loadData();
+    </script>
+</body>
+</html>
