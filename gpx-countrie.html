@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GPX Log Analysis</title>
+<script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+
+<style>
+body { font-family: "Times New Roman"; padding: 20px; background: #fffff3;}
+
+input, select { margin-bottom: 15px; padding: 5px; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 30px;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th { background: #eeffee; }
+
+.year-cell {
+  background: #aaddaa;
+  font-weight: bold;
+  text-align: center;
+  min-width: 70px;
+}
+
+.flag {
+  margin-right: 6px;
+}
+
+#timelineContainer {
+  overflow-x: auto;
+}
+</style>
+</head>
+<body>
+
+<h1>GPX Logging Analysis - International Travel</h1>
+
+<input type="file" id="gpxFiles" multiple accept=".gpx"/>
+
+<label>Home Country:
+<select id="homeCountrySelect"></select>
+</label>
+
+<h2>Timeline View</h2>
+<div id="timelineContainer"></div>
+
+<h2>Detailed</h2>
+<table id="summaryTable">
+  <thead>
+    <tr>
+      <th>Year</th>
+      <th>Country</th>
+      <th>Date (from → to)</th>
+      <th>Stay (days)</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+
+
+<script>
+let countriesGeoJSON;
+let mergedTimeline = [];
+let homeCountry = "";
+
+const ISO3_TO_ISO2 = {
+AFG:"AF", ALB:"AL", DZA:"DZ", AND:"AD", AGO:"AO", ATG:"AG", ARG:"AR", ARM:"AM",
+AUS:"AU", AUT:"AT", AZE:"AZ", BHS:"BS", BHR:"BH", BGD:"BD", BRB:"BB", BLR:"BY",
+BEL:"BE", BLZ:"BZ", BEN:"BJ", BTN:"BT", BOL:"BO", BIH:"BA", BWA:"BW", BRA:"BR",
+BRN:"BN", BGR:"BG", BFA:"BF", BDI:"BI", CPV:"CV", KHM:"KH", CMR:"CM", CAN:"CA",
+CAF:"CF", TCD:"TD", CHL:"CL", CHN:"CN", COL:"CO", COM:"KM", COG:"CG", COD:"CD",
+CRI:"CR", CIV:"CI", HRV:"HR", CUB:"CU", CYP:"CY", CZE:"CZ", DNK:"DK", DJI:"DJ",
+DMA:"DM", DOM:"DO", ECU:"EC", EGY:"EG", SLV:"SV", GNQ:"GQ", ERI:"ER", EST:"EE",
+SWZ:"SZ", ETH:"ET", FJI:"FJ", FIN:"FI", FRA:"FR", GAB:"GA", GMB:"GM", GEO:"GE",
+DEU:"DE", GHA:"GH", GRC:"GR", GRD:"GD", GTM:"GT", GIN:"GN", GNB:"GW", GUY:"GY",
+HTI:"HT", HND:"HN", HUN:"HU", ISL:"IS", IND:"IN", IDN:"ID", IRN:"IR", IRQ:"IQ",
+IRL:"IE", ISR:"IL", ITA:"IT", JAM:"JM", JPN:"JP", JOR:"JO", KAZ:"KZ", KEN:"KE",
+KIR:"KI", PRK:"KP", KOR:"KR", KWT:"KW", KGZ:"KG", LAO:"LA", LVA:"LV", LBN:"LB",
+LSO:"LS", LBR:"LR", LBY:"LY", LIE:"LI", LTU:"LT", LUX:"LU", MDG:"MG", MWI:"MW",
+MYS:"MY", MDV:"MV", MLI:"ML", MLT:"MT", MHL:"MH", MRT:"MR", MUS:"MU", MEX:"MX",
+FSM:"FM", MDA:"MD", MCO:"MC", MNG:"MN", MNE:"ME", MAR:"MA", MOZ:"MZ", MMR:"MM",
+NAM:"NA", NRU:"NR", NPL:"NP", NLD:"NL", NZL:"NZ", NIC:"NI", NER:"NE", NGA:"NG",
+MKD:"MK", NOR:"NO", OMN:"OM", PAK:"PK", PLW:"PW", PAN:"PA", PNG:"PG", PRY:"PY",
+PER:"PE", PHL:"PH", POL:"PL", PRT:"PT", QAT:"QA", ROU:"RO", RUS:"RU", RWA:"RW",
+KNA:"KN", LCA:"LC", VCT:"VC", WSM:"WS", SMR:"SM", STP:"ST", SAU:"SA", SEN:"SN",
+SRB:"RS", SYC:"SC", SLE:"SL", SGP:"SG", SVK:"SK", SVN:"SI", SLB:"SB", SOM:"SO",
+ZAF:"ZA", SSD:"SS", ESP:"ES", LKA:"LK", SDN:"SD", SUR:"SR", SWE:"SE", CHE:"CH",
+SYR:"SY", TJK:"TJ", TZA:"TZ", THA:"TH", TLS:"TL", TGO:"TG", TON:"TO", TTO:"TT",
+TUN:"TN", TUR:"TR", TKM:"TM", TUV:"TV", UGA:"UG", UKR:"UA", ARE:"AE", GBR:"GB",
+USA:"US", URY:"UY", UZB:"UZ", VUT:"VU", VAT:"VA", VEN:"VE", VNM:"VN", YEM:"YE",
+ZMB:"ZM", ZWE:"ZW"
+};
+
+function flagEmojiFromISO2(code) {
+  if (!code) return "";
+  return code.toUpperCase().replace(/./g,
+    c => String.fromCodePoint(127397 + c.charCodeAt())
+  );
+}
+
+function parseDateFromFilename(name) {
+  let m = name.match(/(\d{4})m(\d{1,2})/i);
+  if (m) return new Date(+m[1], +m[2]-1, 1);
+
+  let w = name.match(/(\d{4})w(\d{1,2})/i);
+  if (w) {
+    const year = +w[1];
+    const week = +w[2];
+    const jan4 = new Date(year,0,4);
+    const startOfWeek1 = new Date(jan4 - ((jan4.getDay()||7)-1)*86400000);
+    return new Date(startOfWeek1.getTime() + (week-1)*7*86400000);
+  }
+  return new Date();
+}
+
+/* Load countries */
+fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+.then(r=>r.json())
+.then(data=>countriesGeoJSON=data);
+
+/* Home country change */
+document.getElementById("homeCountrySelect")
+.addEventListener("change", e=>{
+  homeCountry = e.target.value;
+  buildSummaryTable();
+});
+
+/* GPX Upload */
+document.getElementById("gpxFiles")
+.addEventListener("change", async e=>{
+  const files = [...e.target.files];
+  const filesWithDates = [];
+
+  for (const file of files) {
+    const xml = new DOMParser()
+      .parseFromString(await file.text(),"application/xml");
+
+    const first = xml.querySelector("trkpt time");
+    const last  = xml.querySelector("trkpt:last-of-type time");
+
+    const start = first ? new Date(first.textContent)
+                        : parseDateFromFilename(file.name);
+    const end   = last ? new Date(last.textContent)
+                       : start;
+
+    filesWithDates.push({xml,start,end});
+  }
+
+  filesWithDates.sort((a,b)=>a.start-b.start);
+
+  const timeline = [];
+
+  for (const f of filesWithDates) {
+    const trkpts=[...f.xml.getElementsByTagName("trkpt")];
+    const visited=new Set();
+
+    for(const pt of trkpts){
+      const lon=+pt.getAttribute("lon");
+      const lat=+pt.getAttribute("lat");
+      const p=turf.point([lon,lat]);
+
+      for(const feature of countriesGeoJSON.features){
+        if(turf.booleanPointInPolygon(p,feature)){
+          visited.add(feature.properties.name);
+        }
+      }
+    }
+
+    for(const c of visited){
+      timeline.push({country:c,start:f.start,end:f.end});
+    }
+  }
+
+  /* Merge consecutive stays */
+  mergedTimeline=[];
+  for(const entry of timeline){
+    const last=mergedTimeline.at(-1);
+    if(last && last.country===entry.country){
+      last.end = entry.end>last.end ? entry.end : last.end;
+    } else {
+      mergedTimeline.push({...entry});
+    }
+  }
+
+  /* Detect home country */
+  const totals={};
+  for(const e of mergedTimeline){
+    const days=Math.max(1,
+      Math.ceil((e.end-e.start)/86400000));
+    totals[e.country]=(totals[e.country]||0)+days;
+  }
+
+  const sorted=Object.entries(totals)
+    .sort((a,b)=>b[1]-a[1]);
+
+  homeCountry=sorted[0]?.[0]||"";
+
+  const select=document.getElementById("homeCountrySelect");
+  select.innerHTML="";
+  for(const [c] of sorted){
+    const o=document.createElement("option");
+    o.value=c;
+    o.textContent=c;
+    if(c===homeCountry) o.selected=true;
+    select.appendChild(o);
+  }
+
+  buildSummaryTable();
+});
+
+/* Build Summary Table */
+function buildSummaryTable(){
+  const tbody=document.querySelector("#summaryTable tbody");
+  tbody.innerHTML="";
+
+  const rows=mergedTimeline
+    .filter(e=>e.country!==homeCountry)
+    .map(e=>{
+      const days=Math.max(1,
+        Math.ceil((e.end-e.start)/86400000));
+      const mid=new Date((e.start.getTime()+e.end.getTime())/2);
+      return {...e,days,midDate:mid,year:mid.getFullYear()};
+    })
+    .sort((a,b)=>b.midDate-a.midDate);
+
+  const byYear={};
+  for(const r of rows){
+    byYear[r.year]??=[];
+    byYear[r.year].push(r);
+  }
+
+  for(const year of Object.keys(byYear).sort((a,b)=>b-a)){
+    const entries=byYear[year];
+
+    entries.forEach((e,idx)=>{
+      const tr=document.createElement("tr");
+
+      if(idx===0){
+        const tdYear=document.createElement("td");
+        tdYear.className="year-cell";
+        tdYear.rowSpan=entries.length;
+        tdYear.textContent=year;
+        tr.appendChild(tdYear);
+      }
+
+      const feature=countriesGeoJSON.features
+        .find(f=>f.properties.name===e.country);
+      const iso2=ISO3_TO_ISO2[feature?.id];
+      const flag=flagEmojiFromISO2(iso2);
+
+      tr.innerHTML+=`
+        <td><span class="flag">${flag}</span>${e.country}</td>
+        <td>${e.start.toISOString().slice(0,10)} → ${e.end.toISOString().slice(0,10)}</td>
+        <td>${e.days}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  buildDailyTimeline();
+}
+
+/* Build Daily Timeline View */
+function buildDailyTimeline(){
+  const container=document.getElementById("timelineContainer");
+  container.innerHTML="";
+
+  const table=document.createElement("table");
+
+  const dayMap={};
+
+  // Build day map (include home country)
+  for(const stay of mergedTimeline){
+    let current=new Date(stay.start);
+    const end=new Date(stay.end);
+
+    while(current<=end){
+      const y=current.getFullYear();
+      const key=current.toISOString().slice(0,10);
+      dayMap[y]??={};
+      dayMap[y][key]=stay.country;
+      current.setDate(current.getDate()+1);
+    }
+  }
+
+  const years = Object.keys(dayMap).sort((a,b)=>b-a);
+  if(!years.length) return;
+
+  /* -------- MONTH HEADER ROW (FULL YEAR) -------- */
+  const headerRow=document.createElement("tr");
+
+  const emptyHeader=document.createElement("th");
+  emptyHeader.className="year-cell";
+  emptyHeader.textContent="Year";
+  headerRow.appendChild(emptyHeader);
+
+  const referenceYear = parseInt(years[0]);
+  const startOfYear = new Date(referenceYear,0,1);
+  const endOfYear   = new Date(referenceYear,11,31);
+
+  let current = new Date(startOfYear);
+
+  while(current <= endOfYear){
+    const month = current.getMonth();
+    const monthName = current.toLocaleString("default",{month:"short"});
+
+    let span = 0;
+    const temp = new Date(current);
+
+    while(temp.getMonth() === month){
+      span++;
+      temp.setDate(temp.getDate()+1);
+    }
+
+    const th=document.createElement("th");
+    th.colSpan=span;
+    th.textContent=monthName;
+    th.style.textAlign="center";
+    headerRow.appendChild(th);
+
+    current = temp;
+  }
+
+  table.appendChild(headerRow);
+
+  /* -------- YEAR ROWS -------- */
+  for(const year of years){
+    const y = parseInt(year);
+    const row=document.createElement("tr");
+
+    const yearCell=document.createElement("td");
+    yearCell.className="year-cell";
+    yearCell.textContent=year;
+    row.appendChild(yearCell);
+
+    const start = new Date(y,0,1);
+    const end   = new Date(y,11,31);
+
+    let currentDate = new Date(start);
+
+    while(currentDate <= end){
+
+      const key=currentDate.toISOString().slice(0,10);
+      const country = dayMap[year]?.[key] || null;
+
+      let span = 1;
+      const temp = new Date(currentDate);
+      temp.setDate(temp.getDate()+1);
+
+      while(
+        temp <= end &&
+        (dayMap[year]?.[temp.toISOString().slice(0,10)] || null) === country
+      ){
+        span++;
+        temp.setDate(temp.getDate()+1);
+      }
+
+      const cell=document.createElement("td");
+      cell.colSpan=span;
+      cell.style.textAlign="center";
+
+      if(country){
+        const feature=countriesGeoJSON.features
+          .find(f=>f.properties.name===country);
+        const iso2=ISO3_TO_ISO2[feature?.id];
+        const flag=flagEmojiFromISO2(iso2);
+
+        cell.textContent = flag;
+
+        if(country != homeCountry){
+          cell.style.backgroundColor = "#eefff6";
+        }
+      } else {
+        // 🔹 Empty cell for missing data
+        cell.innerHTML = "";
+      }
+
+      row.appendChild(cell);
+      currentDate = temp;
+    }
+
+    table.appendChild(row);
+  }
+
+  container.appendChild(table);
+}
+
+</script>
+
+</body>
+</html>
+
