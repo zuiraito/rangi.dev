@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GPX Countries by Day</title>
+<script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+<style>
+body { font-family: Arial; padding: 20px; }
+h1 { margin-bottom: 10px; }
+h2 { margin-top: 30px; margin-bottom: 10px; }
+input { margin-bottom: 20px; }
+table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+th { background-color: #f2f2f2; }
+#summary { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
+#homeCountrySection { margin-bottom: 20px; }
+#homeCountrySection label { margin-right: 10px; font-weight: bold; }
+#homeCountrySelect { padding: 5px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<h1>GPX Countries by Day</h1>
+<div id="homeCountrySection" style="display: none;">
+  <label for="homeCountrySelect">Home Country:</label>
+  <select id="homeCountrySelect"></select>
+</div>
+<div id="summary">
+  <strong>Summary (excluding home country):</strong>
+  <table id="summaryTable" style="margin-top: 10px;">
+    <thead>
+      <tr>
+        <th>Country</th>
+        <th>Date</th>
+        <th>Stay</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="3">No GPX loaded yet.</td></tr>
+    </tbody>
+  </table>
+</div>
+<input type="file" id="gpxFiles" multiple accept=".gpx"/>
+<h2>Raw data per day</h2>
+<table id="resultTable">
+  <thead>
+    <tr><th>Date / File</th><th>Countries Visited</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+let countriesGeoJSON;
+let countryTimeline = [];
+let allCountries = new Set();
+
+// Country to flag emoji mapping
+const countryFlags = {
+  'Afghanistan': '🇦🇫', 'Albania': '🇦🇱', 'Algeria': '🇩🇿', 'Andorra': '🇦🇩', 'Angola': '🇦🇴',
+  'Argentina': '🇦🇷', 'Armenia': '🇦🇲', 'Australia': '🇦🇺', 'Austria': '🇦🇹', 'Azerbaijan': '🇦🇿',
+  'Bahamas': '🇧🇸', 'Bahrain': '🇧🇭', 'Bangladesh': '🇧🇩', 'Barbados': '🇧🇧', 'Belarus': '🇧🇾',
+  'Belgium': '🇧🇪', 'Belize': '🇧🇿', 'Benin': '🇧🇯', 'Bhutan': '🇧🇹', 'Bolivia': '🇧🇴',
+  'Bosnia and Herzegovina': '🇧🇦', 'Botswana': '🇧🇼', 'Brazil': '🇧🇷', 'Brunei': '🇧🇳', 'Bulgaria': '🇧🇬',
+  'Burkina Faso': '🇧🇫', 'Burundi': '🇧🇮', 'Cambodia': '🇰🇭', 'Cameroon': '🇨🇲', 'Canada': '🇨🇦',
+  'Cape Verde': '🇨🇻', 'Central African Republic': '🇨🇫', 'Chad': '🇹🇩', 'Chile': '🇨🇱', 'China': '🇨🇳',
+  'Colombia': '🇨🇴', 'Comoros': '🇰🇲', 'Congo': '🇨🇬', 'Costa Rica': '🇨🇷', 'Croatia': '🇭🇷',
+  'Cuba': '🇨🇺', 'Cyprus': '🇨🇾', 'Czech Republic': '🇨🇿', 'Czechia': '🇨🇿', 
+  'Democratic Republic of the Congo': '🇨🇩', 'Denmark': '🇩🇰', 'Djibouti': '🇩🇯', 'Dominica': '🇩🇲',
+  'Dominican Republic': '🇩🇴', 'East Timor': '🇹🇱', 'Ecuador': '🇪🇨', 'Egypt': '🇪🇬', 'El Salvador': '🇸🇻',
+  'Equatorial Guinea': '🇬🇶', 'Eritrea': '🇪🇷', 'Estonia': '🇪🇪', 'Ethiopia': '🇪🇹', 'Fiji': '🇫🇯',
+  'Finland': '🇫🇮', 'France': '🇫🇷', 'Gabon': '🇬🇦', 'Gambia': '🇬🇲', 'Georgia': '🇬🇪',
+  'Germany': '🇩🇪', 'Ghana': '🇬🇭', 'Greece': '🇬🇷', 'Grenada': '🇬🇩', 'Guatemala': '🇬🇹',
+  'Guinea': '🇬🇳', 'Guinea-Bissau': '🇬🇼', 'Guyana': '🇬🇾', 'Haiti': '🇭🇹', 'Honduras': '🇭🇳',
+  'Hungary': '🇭🇺', 'Iceland': '🇮🇸', 'India': '🇮🇳', 'Indonesia': '🇮🇩', 'Iran': '🇮🇷',
+  'Iraq': '🇮🇶', 'Ireland': '🇮🇪', 'Israel': '🇮🇱', 'Italy': '🇮🇹', 'Ivory Coast': '🇨🇮',
+  'Jamaica': '🇯🇲', 'Japan': '🇯🇵', 'Jordan': '🇯🇴', 'Kazakhstan': '🇰🇿', 'Kenya': '🇰🇪',
+  'Kiribati': '🇰🇮', 'Kuwait': '🇰🇼', 'Kyrgyzstan': '🇰🇬', 'Laos': '🇱🇦', 'Latvia': '🇱🇻',
+  'Lebanon': '🇱🇧', 'Lesotho': '🇱🇸', 'Liberia': '🇱🇷', 'Libya': '🇱🇾', 'Liechtenstein': '🇱🇮',
+  'Lithuania': '🇱🇹', 'Luxembourg': '🇱🇺', 'Macedonia': '🇲🇰', 'Madagascar': '🇲🇬', 'Malawi': '🇲🇼',
+  'Malaysia': '🇲🇾', 'Maldives': '🇲🇻', 'Mali': '🇲🇱', 'Malta': '🇲🇹', 'Marshall Islands': '🇲🇭',
+  'Mauritania': '🇲🇷', 'Mauritius': '🇲🇺', 'Mexico': '🇲🇽', 'Micronesia': '🇫🇲', 'Moldova': '🇲🇩',
+  'Monaco': '🇲🇨', 'Mongolia': '🇲🇳', 'Montenegro': '🇲🇪', 'Morocco': '🇲🇦', 'Mozambique': '🇲🇿',
+  'Myanmar': '🇲🇲', 'Namibia': '🇳🇦', 'Nauru': '🇳🇷', 'Nepal': '🇳🇵', 'Netherlands': '🇳🇱',
+  'New Zealand': '🇳🇿', 'Nicaragua': '🇳🇮', 'Niger': '🇳🇪', 'Nigeria': '🇳🇬', 'North Korea': '🇰🇵',
+  'Norway': '🇳🇴', 'Oman': '🇴🇲', 'Pakistan': '🇵🇰', 'Palau': '🇵🇼', 'Palestine': '🇵🇸',
+  'Panama': '🇵🇦', 'Papua New Guinea': '🇵🇬', 'Paraguay': '🇵🇾', 'Peru': '🇵🇪', 'Philippines': '🇵🇭',
+  'Poland': '🇵🇱', 'Portugal': '🇵🇹', 'Qatar': '🇶🇦', 'Romania': '🇷🇴', 'Russia': '🇷🇺',
+  'Rwanda': '🇷🇼', 'Saint Kitts and Nevis': '🇰🇳', 'Saint Lucia': '🇱🇨', 'Saint Vincent and the Grenadines': '🇻🇨',
+  'Samoa': '🇼🇸', 'San Marino': '🇸🇲', 'Sao Tome and Principe': '🇸🇹', 'Saudi Arabia': '🇸🇦',
+  'Senegal': '🇸🇳', 'Serbia': '🇷🇸', 'Seychelles': '🇸🇨', 'Sierra Leone': '🇸🇱', 'Singapore': '🇸🇬',
+  'Slovakia': '🇸🇰', 'Slovenia': '🇸🇮', 'Solomon Islands': '🇸🇧', 'Somalia': '🇸🇴', 'South Africa': '🇿🇦',
+  'South Korea': '🇰🇷', 'South Sudan': '🇸🇸', 'Spain': '🇪🇸', 'Sri Lanka': '🇱🇰', 'Sudan': '🇸🇩',
+  'Suriname': '🇸🇷', 'Swaziland': '🇸🇿', 'Sweden': '🇸🇪', 'Switzerland': '🇨🇭', 'Syria': '🇸🇾',
+  'Taiwan': '🇹🇼', 'Tajikistan': '🇹🇯', 'Tanzania': '🇹🇿', 'Thailand': '🇹🇭', 'Togo': '🇹🇬',
+  'Tonga': '🇹🇴', 'Trinidad and Tobago': '🇹🇹', 'Tunisia': '🇹🇳', 'Turkey': '🇹🇷', 'Turkmenistan': '🇹🇲',
+  'Tuvalu': '🇹🇻', 'Uganda': '🇺🇬', 'Ukraine': '🇺🇦', 'United Arab Emirates': '🇦🇪', 'United Kingdom': '🇬🇧',
+  'United States of America': '🇺🇸', 'United States': '🇺🇸', 'Uruguay': '🇺🇾', 'Uzbekistan': '🇺🇿',
+  'Vanuatu': '🇻🇺', 'Vatican City': '🇻🇦', 'Venezuela': '🇻🇪', 'Vietnam': '🇻🇳', 'Yemen': '🇾🇪',
+  'Zambia': '🇿🇲', 'Zimbabwe': '🇿🇼'
+};
+
+function getFlagEmoji(countryName) {
+  return countryFlags[countryName] || '🏴';
+}
+
+// Load world countries GeoJSON from GitHub
+fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
+  .then(res => res.json())
+  .then(data => { 
+    countriesGeoJSON = data; 
+    const summaryTbody = document.querySelector('#summaryTable tbody');
+    summaryTbody.innerHTML = '<tr><td colspan="3">No GPX loaded yet.</td></tr>';
+  });
+
+// Function to calculate days stayed in each country
+function calculateDaysPerCountry(timeline) {
+  const daysPerCountry = {};
+  for (let entry of timeline) {
+    const start = entry.start instanceof Date ? entry.start : new Date(entry.start);
+    const end = entry.end instanceof Date ? entry.end : new Date(entry.end);
+    // Calculate actual days difference
+    const days = Math.max(1, (end - start) / (1000 * 60 * 60 * 24) + 1);
+    daysPerCountry[entry.country] = (daysPerCountry[entry.country] || 0) + days;
+  }
+  return daysPerCountry;
+}
+
+// Function to detect home country (most days stayed)
+function detectHomeCountry(timeline) {
+  const daysPerCountry = calculateDaysPerCountry(timeline);
+  let maxDays = 0;
+  let homeCountry = null;
+  for (let [country, days] of Object.entries(daysPerCountry)) {
+    if (days > maxDays) {
+      maxDays = days;
+      homeCountry = country;
+    }
+  }
+  return homeCountry;
+}
+
+// Function to update summary based on selected home country
+function updateSummary() {
+  const homeCountry = document.getElementById('homeCountrySelect').value;
+  
+  // Merge timeline: consecutive entries of same country are merged
+  const mergedTimeline = [];
+  for (let i = 0; i < countryTimeline.length; i++) {
+    const entry = countryTimeline[i];
+    if (mergedTimeline.length === 0) {
+      mergedTimeline.push({ ...entry });
+    } else {
+      const last = mergedTimeline[mergedTimeline.length - 1];
+      if (last.country === entry.country) {
+        // Extend end date
+        last.end = entry.end > last.end ? entry.end : last.end;
+      } else {
+        mergedTimeline.push({ ...entry });
+      }
+    }
+  }
+
+  // Build summary table, excluding home country
+  const summaryTbody = document.querySelector('#summaryTable tbody');
+  summaryTbody.innerHTML = '';
+  
+  const filteredTimeline = mergedTimeline.filter(entry => entry.country !== homeCountry);
+  
+  if (filteredTimeline.length === 0) {
+    summaryTbody.innerHTML = '<tr><td colspan="3">No international travel detected.</td></tr>';
+  } else {
+    // Reverse to show most recent first
+    filteredTimeline.reverse();
+    for (let entry of filteredTimeline) {
+      const startStr = entry.start.toISOString().split('T')[0];
+      const endStr = entry.end.toISOString().split('T')[0];
+      const days = Math.ceil((entry.end - entry.start) / (1000 * 60 * 60 * 24)) + 1;
+      const flag = getFlagEmoji(entry.country);
+      
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${flag} ${entry.country}</td>
+        <td>${startStr} → ${endStr}</td>
+        <td>${days} day${days !== 1 ? 's' : ''}</td>
+      `;
+      summaryTbody.appendChild(row);
+    }
+  }
+}
+
+// Handle GPX file upload
+document.getElementById('gpxFiles').addEventListener('change', async (event) => {
+  const files = Array.from(event.target.files);
+  if (!countriesGeoJSON) {
+    alert("Country data not loaded yet. Try again in a few seconds.");
+    return;
+  }
+
+  const tbody = document.querySelector('#resultTable tbody');
+  tbody.innerHTML = '';
+
+  const filesWithDate = [];
+  for (let file of files) {
+    const text = await file.text();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, "application/xml");
+    
+    // Get all time elements from trackpoints
+    const timeElements = xml.querySelectorAll('trkpt time');
+    if (timeElements.length === 0) {
+      console.warn(`No time data found in ${file.name}`);
+      continue; // Skip files without time data
+    }
+    
+    const firstTimeEl = timeElements[0];
+    const lastTimeEl = timeElements[timeElements.length - 1];
+    const startDate = new Date(firstTimeEl.textContent);
+    const endDate = new Date(lastTimeEl.textContent);
+    
+    filesWithDate.push({ file, text, xml, startDate, endDate });
+  }
+
+  // Sort files chronologically (most recent first)
+  filesWithDate.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+
+  countryTimeline = []; // reset
+  allCountries = new Set(); // reset
+
+  // Process each file
+  for (let f of filesWithDate) {
+    const file = f.file;
+    const xml = f.xml;
+    const trkpts = Array.from(xml.getElementsByTagName('trkpt'));
+    const points = trkpts.map(pt => [parseFloat(pt.getAttribute('lon')), parseFloat(pt.getAttribute('lat'))]);
+
+    const countriesVisited = new Set();
+
+    for (let [lon, lat] of points) {
+      const pt = turf.point([lon, lat]);
+      for (let feature of countriesGeoJSON.features) {
+        if (turf.booleanPointInPolygon(pt, feature)) {
+          countriesVisited.add(feature.properties.name);
+        }
+      }
+    }
+
+    // Add row to table
+    const dateDisplay = f.startDate.toISOString().split('T')[0];
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${dateDisplay} (${file.name})</td><td>${[...countriesVisited].join(', ')}</td>`;
+    tbody.appendChild(row);
+
+    // Add to timeline
+    for (let c of countriesVisited) {
+      countryTimeline.push({ country: c, start: f.startDate, end: f.endDate });
+      allCountries.add(c);
+    }
+  }
+
+  // Detect home country and populate dropdown
+  const homeCountry = detectHomeCountry(countryTimeline);
+  const select = document.getElementById('homeCountrySelect');
+  select.innerHTML = '';
+  
+  const sortedCountries = Array.from(allCountries).sort();
+  for (let country of sortedCountries) {
+    const option = document.createElement('option');
+    option.value = country;
+    option.textContent = country;
+    if (country === homeCountry) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  }
+  
+  // Show home country section
+  document.getElementById('homeCountrySection').style.display = 'block';
+  
+  // Update summary
+  updateSummary();
+});
+
+// Handle home country change
+document.getElementById('homeCountrySelect').addEventListener('change', updateSummary);
+</script>
+
+</body>
+</html>
