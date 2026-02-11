@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HTML Cheat Sheet</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Times New Roman", Times, serif;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    aside {
+      width: 220px;
+      padding: 16px;
+      border-right: 1px solid #000;
+    }
+
+    aside ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    aside li {
+      margin-bottom: 8px;
+    }
+
+    aside a {
+      text-decoration: none;
+      color: black;
+    }
+
+    main {
+      flex: 1;
+      padding: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <aside>
+      <h2>Contents</h2>
+      <ul>
+        <li><a href="https://rangi.dev">Home</a></li>
+        <li><a href="#one">HTML Cheat Sheet</a></li>
+      </ul>
+    </aside>
+
+    <main>
+      <h1 id="one">HTML Cheat Sheet</h1>
+      <table>
+	      <tr>
+		      <td>Create a link</td>
+		      <td><code>&lt;a href="https://example.com"&gt;Visit Example&lt;/a&gt;.</code></td>
+	      </tr>
+	      <tr>
+		      <td>Create a link that opens in a new tab</td>
+		      <td><code>&lt;a href="https://example.com" target="_blank"&gt;Visit Example&lt;/a&gt;.</code></td>
+	      </tr>
+      </table>
+    </main>
+  </div>
+
+</body>
+</html>
+
