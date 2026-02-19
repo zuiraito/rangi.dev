@@ -2,231 +2,199 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>rangi.dev</title>
+  <title>rangi.dev - gear</title>
   <style>
-    body {
-      margin: 0;
-      font-family: "Times New Roman", Times, serif;
-      background: #ffffee;
-    }
-
-    .container {
-      display: flex;
-      min-height: 100vh;
-    }
-
-    aside {
-      width: 220px;
-      padding: 16px;
-      border-right: 1px solid #000;
-      background: #eeffee;
-    }
-
-    aside ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    aside li {
-      margin-bottom: 8px;
-    }
-
-    aside a {
-      text-decoration: none;
-      color: black;
-    }
-
-    main {
-      flex: 1;
-      padding: 24px;
-    }
-    h1::after{
-    display: block;
-    content: '';
-    margin-top: 10px;
-    border-bottom: 1px solid #000;
-    }
-    h2::after{
-    display: block;
-    content: '';
-    margin-top: 3px;
-    border-bottom: 1px solid #aaa;
-    }
-    table { border-collapse: collapse; }
+		body { margin: 0; font-family: "Times New Roman", Times, serif; background: #ffffee; }
+  		.container { display: flex; min-height: 100vh; }
+  	aside { width: 220px; padding: 16px; border-right: 1px solid #000; background: #eeffee; }
+  		aside ul { list-style: none; padding: 0; margin: 0; }
+  		aside a { text-decoration: none; color: black; }
+  	main { flex: 1; padding: 24px; }
+  	h1::after{ display: block; content: ''; margin-top: 10px; border-bottom: 1px solid #000; }
+  	h2::after{ display: block; content: ''; margin-top: 3px; border-bottom: 1px solid #aaa; }
+		table { border-collapse: collapse; }
     th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
     th { background: #eee; }
   </style>
 </head>
 <body>
-
   <div class="container">
     <aside>
+      <a href="http://rangi.dev/" target="_blank">home</a>
       <h2>Contents</h2>
-      <ul>
-        <li><a href="#2">Stuff I've been doing</a>
-	  <ul>
-            <li>├─<a href="#traveling">Traveling</a></li>
-            <li>└─<a href="#sports">Sports</a></li>
-	  </ul>
-	</li>
-	  <li><a href="#1">What does this site have to offer?</a>
-	  <ul>
-            <li>├─<a href="#art">Art</a></li>
-            <li>└─<a href="#tools">Tools</a></li>
-	  </ul>
-	  </li>
+			<ul>
+        <li>
+          <a href="#1">Gear</a>
+          <ul>
+            <li>├─<a href="#electronics">Electronics</a></li>
+           	<li>│├─<a href="#laptop">Laptop</a></li>
+           	<li>│├─<a href="#camera">Camera</a></li>
+           	<li>│├─<a href="#watch">Watch</a></li>
+           	<li>│└─<a href="#phone">Phone</a></li>
+            <li>├─<a href="#stationeries">Stationeries</a></li>
+           	<li>│└─<a href="#fountainpen">Fountainpens</a></li>
+            <li>├─<a href="#camping">camping</a></li>
+          </ul>
+        </li>
       </ul>
-      <h2>Stuff</h2>
-      <ul>
-	      <li><a href="https://rangi.dev/art" target="_blank">Art Gallery</a></li>
-	      <li><a href="http://rangi.dev/timer?length=50m&hideSeconds=1" target="_blank">Study Timer</a></li>
-	      <li>Some <a href="http://rangi.dev/Public/Musiknoten" target="_blank">Sheet Music</a></li>
-	      <li><a href="http://rangi.dev/spectrogram" target="_blank">Spectrogram</a></li>
-	      <li><a href="http://rangi.dev/stopwatch" target="_blank">Stopwatch</a></li>
-	      <li><a href="https://github.com/zuiraito" target="_blank">Github</a></li>
-      </ul>
-      <h2>Contact</h2>
-      <ul>      		
-		  <li><a href="mailto:rangi@fridi.de?subject=rangi.dev contact - ">E-Mail</a></li>
-	  </ul>
     </aside>
+		<main>
+			<h1 id="1">Gear - Working progress </h1>
+			<h3>Why does this page exist?</h3>
+			<p>The main purpose of this page is that I can easily compare and keep an overview of the stuff own. There is a small chance you might find it useful if you are trying to satisfy a nice or you want to have an opinion about some item on this list, feel free <a href="mailto:rangi@fridi.de?subject=rangi.dev gear - ">ask</a> about it. I usually overthink and over research most gear to find exactly what satisfies my needs.</p>
+			<h2 id="electronics">Electronics</h2>
+			<h3 id="laptop">Laptop</h3>
+			<p>Currently I'm doing most of my computing on a 14" laptop running Debian 13 (Trixie).</p>
+			<table>
+				<tr>
+					<th>Laptop</th>
+					<th>CPU</th>
+					<th>GPU</th>
+					<th>RAM</th>
+					<th>Battery</th>
+					<th>Screen</th>
+					<th>Ports</th>
+					<th>Weight</th>
+				</tr>
+				<tr>
+					<th><a href="https://www.tuxedocomputers.com/en/TUXEDO-InfinityBook-Pro-14-Gen9-AMD#gallery" target="_blank">TUXEDO InfinityBook Pro 14 - Gen 9</a></th>
+					<td>AMD Ryzen 7 8845HS</td>
+					<td>AMD Radeon 780M (integrated)</td>
+					<td>32GB DDR5 5600 Mhz</td>
+					<td>80 Wh</td>
+					<td>2880x1800 400 nits</td>
+					<td>Kensington, 3xUSB-A, 2xUSB-C, Headphone, SD-Card, HDMI, LAN</td>
+					<td>1.4 kg</td>
+				</tr>
+			</table>
+			<h3>Specific Requirements</h3>
+			<table>
+				<tr>
+					<th>Laptop</th>
+					<th>Low-pitch fan noise</th>
+				</tr>
+				<tr>
+					<th><a href="https://www.tuxedocomputers.com/en/TUXEDO-InfinityBook-Pro-14-Gen9-AMD#gallery" target="_blank">TUXEDO InfinityBook Pro 14 - Gen 9</a></th>
+					<td>✅</td>
+				</tr>
+				<tr>
+					<th>HP ENVY X360</th>
+					<td>❌</td>
+				</tr>
+			</table>
 
-    <main>
-<h1>Rangi.dev - Hi there</h1>
-<p>Don't ask me what this page is for, I don't even know myself. Currently it's just used to share toe tools I make that i felt like creating - maybe you might find use in them. Other then that this site is also used to collect stuff, "what?" you may ask. To that I answer whatever walks across my way and is to my heart's content (oder so). If you have any comment, thought, addition or desire to talk to someone - feel free to contact me via <a href="mailto:rangi@fridi.de?subject=rangi.dev contact - ">rangi@fridi.de</a></p>
-<h1 id="2">Stuff I've been doing</h1>
-<p><i>Some times it's nice to slow down and stop always wandering "what is next, how do i proceed, will it all work out?" but do the opposite and look back, look at what you've done and what you've created.</i> IDK if that statement true or meaningful, i just pulled it out of my arse. Anyway to not get too existential, here is a tiny bit of proof i existed.</p>
-      <table>
-	      <tr>
-		      <td valign="top">2026-02-11</td><td>- Created a  <a href="https://rangi.dev/gpx-countries" target="_blank">tool</a> for viewing location logging data to see where you traveled to</td>
-	      </tr><tr>
-		      <td valign="top">2026-02-10</td><td>- Added an <a href="https://rangi.dev/art" target="_blank">Art Gallery</a> to the website.</td>
-	      </tr><tr>
-		      <td valign="top">2025-04-01</td><td>- Wrote a suite of programs to replace garmin services for fitnes watches(<a href="https://rangi.dev/scatterplot-distance-speed" target="_blank">Detailed track analysis</a>, <a href="https://rangi.dev/heatmapper" target="_blank">Location Heatmap</a>, <a href="https://github.com/zuiraito/GPX-Track-Visualizer" target="_blank">GPX Mapping</a>).</td>
-	      </tr><tr>
-		      <td valign="top">2024-12-06</td><td>- Wrote a <a href="https://github.com/zuiraito/PDF-graph" target="_blank">program</a> to get a quick graph overview of a bunch of lecture slides.</td>
-	      </tr><tr>
-		      <td valign="top">2024-10-22</td><td>- Wrote a <a href="https://github.com/zuiraito/Slime-Simulation" target"_blank">Slime Simulation</a> based on a paper about bacterial growth.</td>
-	      </tr><tr>
-		      <td valign="top">2023-10-14</td><td>- Started studying Aerospace at TUM</td>
-	      </tr>
-      </table>
-
-      <h2 id=traveling>Traveling</h2>
-      <p>Powered by the wonderful tool i made: <a href="https://github.com/zuiraito/gpx-countries" target"_blank">GPX Logging Analysis - International Travel</a> (i desperately need to get better at naming things)</p>
-      <p>The ideas is to link the trips to pictures or something idk, if i find the time to do that.</p>
-      2026<ul>
-	      <li>Brussels - Attending the FOSDEM conference.</li>
-	      <li>Japan - Visiting family and friends.</li>
-      </ul>2025<ul>
-	      <li>Rome and Naples - Visiting a friend doing a semester abroad.</li>
-	      <li>Paris - A couple of friends ware visiting germany and realized that they had two travel days left on their interrail pass so i spontaneously also got a one day pass and guided them on a day trip to Paris with. We actually managed to see a bunch Eiffel Tower, palace, Notre Dame,  lover (from the outside) and a bunch of cafes even with the limited time.</li>
-	      <li>Switzerland - Visiting friends of family.</li>
-	      <li>Poland - Visiting the hometown of a friend.</li>
-      </ul>2024<ul>
-	      <li>Czech Republic - Trip with friends.</li>
-	      <li>France - No idea why i was in France for a day.</li>
-	      <li>Austria - No idea why i was in France for a day.</li>
-	      <li>Thailand - 20 hour transfer time between two flights to get out of the Airport, and attend the Songkran Festival.</li>
-	      <li>Japan - Visiting family and friends.</li>
-      </ul>2023<ul>
-	      <li>UK - Visiting my sisters boarding school while she is doing a year abroad.</li>
-	      <li>France - Again i have no idea, how i ended up in France xd.</li>
-	      <li>Scandinavia (Norway, Sweden and Denmark) - After high school i did a 3-Week long interrail trip threw the Scandinavian nations mostly staying along the Norwegian coast backpacking with a tent and supply for self-sustained hiking.
-
-      </ul>
-
-      <h2 id=sports>Sports</h2>
-      <table>
-	      <tr>
-		      <td valign="top">2025-10-16</td><td>- Cycled 45 km from Mering to Garching on a fixed gear (<a href="https:///rangi.dev//images/Screenshot%20From%202026-02-11%2001-51-32.png" target="_blank">route</a>)</td>
-	      </tr><tr>
-		      <td valign="top">2025-09-23</td><td>- Cycled 80 km from Aalen to Stuttgart on a fixed gear (<a href="https:///rangi.dev//images/aalen%20stuttgart.png" target="_blank">route</a>)</td>
-	      </tr><tr>
-		      <td valign="top">2025-08-06</td><td>- Cycled 90 km from Stuttgart to Karlsruhe on a fixed gear (<a href="https://rangi.dev/images/2025-08-06-fahrrad.jpg" target="_blank">route</a>)</td>
-	      </tr>
-      </table>
-
-      <h1 id="1">What does this site have to offer?</h1>
-      <h2 id=art>Art</h2>
-      Go check out my <a href="https://rangi.dev/art" target="_blank">art gallery</a>.
-
-
-      <h2 id=tools>Tools</h2>
-      <i>"Don't follow your dreams, follow your tools."</i> - Hank Green
-      <h3>Location and Track Data stuff</h3>
-      <table>
-	      <tr>
-		      <td>GPX Logging Analysis for International Travel</td>
-		      <td><a href="https://rangi.dev/gpx-countries" target="_blank">link</a></td>
-	      </tr><tr>
-		      <td>Sports focussed bulk analysis tool for .gpx and .fit files</td>
-		      <td><a href="https://rangi.dev/scatterplot-distance-speed" target="_blank">link</a></td>
-	      </tr><tr>
-		      <td>Heatmapping tool for .gpx files to visualize where you've been for how long</td>
-		      <td><a href="https://rangi.dev/heatmapper" target="_blank">link</a></td>
-	      </tr>
-      </table>
-      <h3>Music and Audio stuff</h3>
-      <table>
-	      <tr>
-		      <td>(Unfinished) tool to explore chord progressions in an interactive graph.</td>
-		      <td><a href="https://rangi.dev/chords" target="_blank">link</a></td>
-	      </tr><tr>
-		      <td>Piano keyboard with 3 oscillators to experiment with simple sound design</td>
-		      <td><a href="https://rangi.dev/piano" target="_blank">link</a></td>
-	      </tr><tr>
-		      <td>Sine Oscilloscope sound design tool</td>
-		      <td><a href="https://rangi.dev/sinwave" target="_blank">link</a></td>
-	      </tr><tr>
-		      <td>Spectrogram analysis with note detection of real time mic feed</td>
-		      <td><a href="https://rangi.dev/spectrogram" target="_blank">link</a></td>
-	      </tr><tr>
-		      <td>└─ of an input sound file</td>
-		      <td><a href="https://rangi.dev/spectrogram" target="_blank">link</a></td>
-	      </tr>
-      </table>
-      <h3>Math and Science</h3>
-      <table>
-	      <tr>
-		      <td>Latex render Webapp</td>
-		      <td><a href="https://rangi.dev/m" target="_blank">link</a></td>
-	      </tr>
-      </table>
-      <h3>Productivity and other Utility</h3>
-      <table>
-	      <tr>
-		      <td>Stopwatch that saves the start time in the URL to make it easily shareable</td>
-		      <td><a href="https://rangi.dev/stopwatch" target="_blank">link</a></td>
-	      </tr><tr>
-		      <td>Timer that saves the end time in the URL to make it easily shareable</td>
-		      <td><a href="https://rangi.dev/stopwatch" target="_blank">link</a></td>
-	      </tr><tr>
-		      <td>Clock (click to full screen)</td>
-		      <td><a href="https://rangi.dev/clock/minimal" target="_blank">minimal</a>, <a href="https://rangi.dev/clock/precise" target="_blank">scientific</a></td>
-
-	      </tr><tr>
-		      <td>Find your address</td>
-		      <td><a href="https://rangi.dev/ip" target="_blank">link</a>
-	      </tr><tr>
-		      <td>A collection of semi-organized useful resources</td>
-		      <td><a href="https://rangi.dev/resources" target="_blank">link</a>
-	      </tr>
-      </table>
-      <h3>Guides</h3>
-      <i>Guides are tools right? Are guides tools? Was auch immer... </i>
-      <table>
-	      <tr>
-		      <td>Introduction to PGP Encryption</td>
-		      <td><a href="https://rangi.dev/pgp" target="_blank">link</a></td>
-	      </tr>
-      </table>
+			<h2 id="camera">Camera</h2>
+			<h3>Lenses</h3>
+			<p>I have a Sony <a href="https://en.wikipedia.org/wiki/Sony_%CE%B16000" target="_blank">a6000</a> which is an ok camera but i would not recommend buying it now because for its age the price has not really decreased that much. Generally the camera body doesn't make that much of a difference compared to the lens. It might be easier to take better pictures with a cheaper camera because it's simpler to get over the fear of breaking it. Good pictures don't come from the best specs but lots of trial and error and practice which you can get if you aren't scared to just throw the camera into your bag and have it with you all the time.</p>
+			<p>Usually I have a pancake lens on it s.t. it fits into a pocket and is easily accessible. Most of the time I also have one more lens (the fish eye or 50 mm f1.4 prime) in my back for if i want to use it.</p>
+			<table>
+<tr><th>Type     </th><th>FL        </th><th>Aperture</th><th>Min Focus</th><th>Brand    </th><th>Mount     </th><th>Frame</th><th>Filter Size</th><th>AF </th><th>Notes</th></tr>
+<tr><td>         </td><td>          </td><td>        </td><td>         </td><td>         </td><td>          </td><td>     </td><td>           </td><td>   </td><td>     </td></tr>
+<tr><td>Pancake  </td><td>     28 mm</td><td>f4.5    </td><td>    38 cm</td><td>Viltrox  </td><td>Sony E    </td><td>full </td><td>no threads </td><td>yes</td><td>     </td></tr>
+<tr><td>Fish Eye </td><td>    7.5 mm</td><td>f2.8    </td><td>    15 cm</td><td>7Artisans</td><td>Sony E    </td><td>aps-c</td><td>     63 mm </td><td>no </td><td>     </td></tr>
+<tr><td>Tele-Zoom</td><td>170-500 mm</td><td>f5-6.3  </td><td>   300 cm</td><td>Sigma    </td><td>Nikon F   </td><td>full </td><td>     86 mm </td><td><span title="I don't own an adapter that can pass threw the electronic signal needed for AF">yes*</span></td><td>     </td></tr>
+<tr><td>Macro    </td><td>     60 mm</td><td>f2.8    </td><td>    18 cm</td><td>Nikon    </td><td>Nokon F   </td><td>full </td><td>     62 mm </td><td><span title="I don't own an adapter that can pass threw the electronic signal needed for AF">yes*</span></td><td>     </td></tr>
+<tr><td>Prime    </td><td>     50 mm</td><td>f1.4    </td><td>    50 cm</td><td>Minolta  </td><td>Minolta SR</td><td>full </td><td>     55 mm </td><td>no </td><td>     </td></tr>
+<tr><td>Tele-Zoom</td><td> 55-210 mm</td><td>f4.5-6.3</td><td>   100 cm</td><td>Sony     </td><td>Sony E    </td><td>aps-c</td><td>     49 mm </td><td>yes</td><td>     </td></tr>
+<tr><td>Kit-Lens </td><td>  16-55 mm</td><td>f3.5-5.6</td><td>    25 cm</td><td>Sony     </td><td>Sone E    </td><td>aps-c</td><td>   40.4 mm </td><td>yes</td><td>     </td></tr>
+			</table>
+			
+			<h2 id="watch">Watch</h2>
+			<table>
+<tr><th>Watch    </th><th>Brand   </th><th>tells time</th><th>Date</th><th>Alarm</th><th>Timer</th><th>HR </th><th>GNSS</th></tr>
+<tr><th>         </th><td>        </td><td>          </td><td>    </td><td>     </td><td>     </td><td>   </td><td>    </td></tr>
+<tr><th>Venu 2   </th><td>Garmin  </td><td>yes       </td><td>yes </td><td>yes  </td><td>yes  </td><td>yes</td><td>yes </td></tr>
+<tr><th>A700WM-7A</th><td>Casio   </td><td>yes       </td><td>yes </td><td>yes  </td><td>yes  </td><td>no </td><td>no  </td></tr>
+<tr><th>         </th><td>        </td><td>          </td><td>    </td><td>     </td><td>     </td><td>   </td><td>    </td></tr>
+			</table>
 
 
-          </main>
-  </div>
+			<h2 id="phone">Phone</h2>
+			<p>Google Pixel 9a with Graphene OS.</p>
+			<h2 id="stationeries">Stationeries</h2>
+			<h3 id="fountainpen">Fountain Pens</h3>
+			<table>
+				<tr>
+					<th>Pen</th>
+					<th>Brand</th>
+					<th>Nib</th>
+					<th>Body Material</th>
+					<th>Weight</th>
+				</tr>
 
+				<tr>
+					<th><a href="https://www.kaweco-pen.com/schreibgeraete/fuellhalter/950/kaweco-collection-fuellhalter-liliput-blue?number=11000220" target="_blank">Liliput Blue</a></th>
+					<td>Kaweko</td>
+					<td>F</td>
+					<td>Aluminium</td>
+					<td>9 g</td>
+					<td>(Limited Production)</td>
+				</tr>
+				<tr>
+					<th><a href="https://www.kaweco-pen.com/schreibgeraete/fuellhalter/423/kaweco-brass-sport-fuellhalter?c=55" target="_blank">BRASS SPORT</a></th>
+					<td>Kaweko</td>
+					<td>M</td>
+					<td>Brass</td>
+					<td>43 g</td>
+				</tr>
+				<tr>
+					<th><a href="https://www.kaweco-pen.com/schreibgeraete/fuellhalter/114/kaweco-al-sport-fuellhalter-silver?c=49" target="_blank">AL SPORT Silver</a></th>
+					<td>Kaweko</td>
+					<td>F</td>
+					<td>Aluminium</td>
+					<td>21 g</td>
+				</tr>
+				<tr>
+					<th><a href="https://www.lamy.com/de-de/p/lamy-al-star-fullhalter/54529177026904" target="_blank">AL-Star Black</a></th>
+					<td>LAMY</td>
+					<td>LH, Black</td>
+					<td>Aluminium</td>
+					<td>24 g</td>
+				</tr>
+				<tr>
+					<th><a href="https://www.lamy.com/de-de/p/lamy-joy-fullhalter/54395075232088" target="_blank">Joy</a></th>
+					<td>LAMY</td>
+					<td>1.5 mm</td>
+					<td>Plastic</td>
+					<td>17 g</td>
+				</tr>
+			</table>
+
+			<h2 id="camping">Camping and Outdoor Gear</h2>
+			<table>
+			<tr><th>Tents   </th><th>Brand</th><th>People</th><th>Weight</th><th>Color</th></tr>
+			<tr><td>Elixir 2</td><td>MSR  </td><td>    2 </td><td>2.5 kg</td><td>Green</td></tr>
+			<tr><td>        </td><td>     </td><td>      </td><td>      </td><td>     </td></tr>
+			<tr><th>Sleeping Bags</th><th>Brand </th><th>Temperature</th><th>Material </th><th>Weight </th><th>Color</th></tr>
+			<tr><td>MT900        </td><td>Simond</td><td>      0 °C </td><td>Down     </td><td> 945 g </td><td>Red  </td></tr>
+			<tr><td>MT500        </td><td>Simond</td><td>     15 °C </td><td>Polyamide</td><td> 660 g </td><td>Blue </td></tr>
+			<tr><td>Orbit        </td><td>Deuter</td><td>      5 °C </td><td>High-Loft Hollowfiber</td><td> ? </td><td>Black</td></tr>
+			<tr><td>             </td><td>      </td><td>           </td><td>         </td><td>       </td><td>     </td></tr>
+			<tr><th>Liner      </th><th>Brand  </th><th>Material </th><th>Weight </th><th>Color</th></tr>
+			<tr><td>MT500 Inlet</td><td>Forcalz</td><td>Silk     </td><td> 110 g </td><td>white</td></tr>
+			</table>
+
+		</main>
+	</div>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
