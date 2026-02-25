@@ -1,17 +1,5 @@
 [
   {
-    "id": 1,
-    "filename": "205.png",
-    "title": "Good Gateway",
-    "tags": ["meme", "humor", "server", "computer", "head pads"]
-  },
-  {
-    "id": 2,
-    "filename": "does-anyone-know-what-laptop-this-is-ignore-the-text-v0-yf8avn8f37ve1.webp",
-    "title": "Ignore the text - what laptop is this?",
-    "tags": ["meme", "humor", "gooning", "cat", "animal", "computer", "laptop"]
-  },
-  {
     "id": 3,
     "filename": "accidental-baroque.png",
     "title": "Accidental Baroque",
@@ -42,22 +30,10 @@
     "tags": ["digital", "pixel", "glitch", "chaos", "abstract", "black and white", "Artist: bleu281_"]
   },
   {
-    "id": 8,
-    "filename": "cooooooffee.png",
-    "title": "Cooooooffee",
-    "tags": ["coffee", "food", "studying", "absurd", "humor"]
-  },
-  {
     "id": 9,
     "filename": "dont-talke-to-me.png",
     "title": "Don't Talk to Me",
     "tags": ["photography", "human", "collage", "humor", "work"]
-  },
-  {
-    "id": 10,
-    "filename": "hdmi-to-soup.png",
-    "title": "HDMI to Soup",
-    "tags": ["meme", "humor", "cursed", "hdmi", "cable", "walmart", "product", "food", "soup"]
   },
   {
     "id": 11,
@@ -109,18 +85,6 @@
     "tags": ["photography", "collage", "work", "pain", "life" ]
   },
   {
-    "id": 19,
-    "filename": "deruiteroverbeeke.mp4",
-    "title": "deruiteroverbeeke",
-    "tags": ["video", "music", "guitar", "spoon"]
-  },
-  {
-    "id": 20,
-    "filename": "top-a-twink.jpeg",
-    "title": "Top a Twink",
-    "tags": ["meme", "humor", "drawing", "caricature", "horny", "twink", "choice" ]
-  },
-  {
     "id": 21,
     "filename": "loose-the-pants.jpeg",
     "title": "",
@@ -138,18 +102,6 @@
     "filename": "uninterested-flowy-cat.jpeg",
     "title": "Uninterested flowy cat",
     "tags": ["animal", "cat", "chair", "humor"]
-  },
-  {
-    "id": 24,
-    "filename": "cookie-pcb.jpeg",
-    "title": "Cookie PCB",
-    "tags": ["cursed", "electronics", "pcb", "led", "circuit", "project", "humor"]
-  },
-  {
-    "id": 25,
-    "filename": "career-day-harsh-noise.jpeg",
-    "title": "My dad is a harsh noise artist",
-    "tags": ["meme", "humor", "school", "music", "noise"]
   },
   {
     "id": 26,
@@ -193,6 +145,14 @@
     "title": "vancouver kiss",
     "text": "during the 2011 vancouver riots, a woman was shoved by anti-riot police and fell to the ground, she was hurt and her boyfriend quickly rushed down to help her. in his efforts to comfort her, they shared a solacing kiss as the riots raged behind them",
     "tags": ["photography", "streep photographt", "demonstration", "police", "chaos", "love", "kiss", "road", "contrast"]
+  },
+  {
+    "id": 33,
+    "filename": "1_5SHzI-0VaUyhI1LCcIMezg@2x.jpg",
+    "title": "The room of Gottfrid Svartholm",
+    "text": "Per Gottfrid Svartholm Warg (born 17 October 1984), alias anakata, is a Swedish computer specialist, known as the former co-owner of the web hosting company PRQ and co-founder of the BitTorrent site The Pirate Bay together with Fredrik Neij and Peter Sunde. ",
+    "tags": ["photography", "human", "programmer", "room", "computer", "cable", "laptop", "lain"]
   }
+	
   
 ]
