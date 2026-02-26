@@ -85,12 +85,6 @@
     "tags": ["photography", "collage", "work", "pain", "life" ]
   },
   {
-    "id": 21,
-    "filename": "loose-the-pants.jpeg",
-    "title": "",
-    "tags": ["meme", "humor", "drawing", "caricature", "horny", "gay", "muscular", "dog", "guitar"]
-  },
-  {
     "id": 22,
     "filename": "Monkey-Seated-on-Rocks-above-the-Sea.png",
     "title": "Monkey Seated on Rocks above the Sea",
@@ -144,7 +138,7 @@
     "filename": "Screenshot_20251123-074731.png",
     "title": "vancouver kiss",
     "text": "during the 2011 vancouver riots, a woman was shoved by anti-riot police and fell to the ground, she was hurt and her boyfriend quickly rushed down to help her. in his efforts to comfort her, they shared a solacing kiss as the riots raged behind them",
-    "tags": ["photography", "streep photographt", "demonstration", "police", "chaos", "love", "kiss", "road", "contrast"]
+    "tags": ["photography", "street photography", "demonstration", "police", "chaos", "love", "kiss", "road", "contrast"]
   },
   {
     "id": 33,
@@ -152,6 +146,12 @@
     "title": "The room of Gottfrid Svartholm",
     "text": "Per Gottfrid Svartholm Warg (born 17 October 1984), alias anakata, is a Swedish computer specialist, known as the former co-owner of the web hosting company PRQ and co-founder of the BitTorrent site The Pirate Bay together with Fredrik Neij and Peter Sunde. ",
     "tags": ["photography", "human", "programmer", "room", "computer", "cable", "laptop", "lain"]
+  },
+  {
+    "id": 34,
+    "filename": "yardsale-mirror-kiss.jpg",
+    "title": "Yard sale mirror kiss",
+    "tags": ["photography", "human", "queer", "love", "kiss", "contrast", "laptop", "lain", "life"]
   }
 	
   
