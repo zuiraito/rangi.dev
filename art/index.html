@@ -360,6 +360,7 @@
         </div>
     </div>
 
+
     <script>
         let images = [];
         let selectedTags = [];
@@ -368,12 +369,32 @@
         let currentFilteredImages = []; // Track currently displayed images
         const IMAGES_DIR = 'images/';
 
+        function readStateFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            selectedTags = params.has('tags') ? params.get('tags').split(',').filter(Boolean) : [];
+            antiTags = params.has('anti') ? params.get('anti').split(',').filter(Boolean) : [];
+            return params.has('img') ? parseInt(params.get('img')) : null;
+        }
+
+        function writeStateToURL(openImageId = null) {
+            const params = new URLSearchParams();
+            if (selectedTags.length > 0) params.set('tags', selectedTags.join(','));
+            if (antiTags.length > 0) params.set('anti', antiTags.join(','));
+            if (openImageId != null) params.set('img', openImageId);
+            const newUrl = params.toString() ? `${location.pathname}?${params}` : location.pathname;
+            history.replaceState(null, '', newUrl);
+        }
+
         async function loadData() {
             try {
                 const response = await fetch('data.json');
                 images = await response.json();
+                const openImageId = readStateFromURL();
                 buildTagList();
                 renderGallery();
+                if (openImageId != null) {
+                    openLightbox(openImageId);
+                }
             } catch (error) {
                 document.getElementById('gallery').innerHTML = '<div class="loading">Error loading data.json</div>';
             }
@@ -427,6 +448,7 @@
                     updateSelectedTagsDisplay();
                     updateTagCounts();
                     renderGallery();
+                    writeStateToURL();
                 });
             });
 
@@ -446,6 +468,7 @@
                     updateAntiTagsDisplay();
                     updateTagCounts();
                     renderGallery();
+                    writeStateToURL();
                 });
             });
 
@@ -457,6 +480,7 @@
                 updateAntiTagsDisplay();
                 updateTagCounts();
                 renderGallery();
+                writeStateToURL();
             });
 
             updateTagCounts();
@@ -492,6 +516,7 @@
             updateSelectedTagsDisplay();
             updateTagCounts();
             renderGallery();
+            writeStateToURL();
         }
 
         function removeAntiTag(tag) {
@@ -614,6 +639,7 @@
             
             displayLightboxImage(img);
             document.getElementById('lightbox').classList.add('active');
+            writeStateToURL(imageId);
         }
 
         function displayLightboxImage(img) {
@@ -639,15 +665,16 @@
                 currentLightboxIndex = (currentLightboxIndex + 1) % currentFilteredImages.length;
             } else if (direction === 'prev') {
                 currentLightboxIndex = (currentLightboxIndex - 1 + currentFilteredImages.length) % currentFilteredImages.length;
-            } else if (direction === 'random') {
-                currentLightboxIndex = Math.floor(Math.random() * currentFilteredImages.length);
             }
             
-            displayLightboxImage(currentFilteredImages[currentLightboxIndex]);
+            const img = currentFilteredImages[currentLightboxIndex];
+            displayLightboxImage(img);
+            writeStateToURL(img.id);
         }
 
         function closeLightbox() {
             document.getElementById('lightbox').classList.remove('active');
+            writeStateToURL();
         }
 
         document.getElementById('lightbox').addEventListener('click', function(e) {
@@ -664,8 +691,6 @@
                     navigateLightbox('next');
                 } else if (e.key === 'ArrowLeft') {
                     navigateLightbox('prev');
-                } else if (e.key === 'r' || e.key === 'R') {
-                    navigateLightbox('random');
                 }
             }
         });
