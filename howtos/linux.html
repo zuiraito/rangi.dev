@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>rangi.dev</title>
+		<style>
+body { margin: 0; font-family: "Times New Roman", Times, serif; background: #ffffee; }
+.container { display: flex; min-height: 100vh; }
+aside { width: 220px; padding: 16px; border-right: 1px solid #000; background: #eeffee; }
+aside ul { list-style: none; padding: 0; margin: 0; }
+aside a { text-decoration: none; color: black; }
+main { flex: 1; padding: 24px; }
+h1::after{ display: block; content: ''; margin-top: 10px; border-bottom: 1px solid #000; }
+h2::after{ display: block; content: ''; margin-top: 3px; border-bottom: 1px solid #aaa; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+th { background: #eee; }
+code { background-color: #f3f3f3; padding: 2px; }
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<aside>
+				<a href="http://rangi.dev/" target="_blank">home</a>
+				<h2>Contents</h2>
+				<ul>
+					<li>
+						<a href="#installationmedia">create an installation media</a>
+						<a href="#keyboard">keyboard and input</a>
+						<ul> 
+							<li> <a href="#japaneseinput">├─japanese</a> </li>
+							<li> <a href="#capslock">├─map caps-lock to esc</a> </li>
+						</ul>
+						<a href="#ricing">ricing (customization)</a>
+					</li>
+				</ul>
+			</aside>
+			<main>
+
+				<h2 id="installationmedia">Create a bootable Installation Media</h2>
+
+				<p> Storage device finden </p>
+				<code> lsblk </code>
+
+				<p> Wenn .img.xz muss man die Datei decompressen </p>
+				<code> xy -d path/to/image.img.xz </code>
+
+				<p> Flashen </p>
+				<code> sudo dd if=path/to/your/image.img of=/dev/sdX bs=4M status=progress && sync</code>
+
+				<h2 id="keyboard"> Keyboard and Input Setup </h2>
+
+				<h3> Layout </h3>
+				I use the English international keyboard with AltGr dead keys. It serves my typing requirements:
+				<table> 
+					<tr> 
+						<th rowspan="2"> Layout </th>
+						<th colspan="7"> easy access to</th>
+					  <th rowspan="2"> can other people use my device? </th>
+					</tr>
+					<tr> 
+						<td> &lt&gt </td>
+						<td> [] </td>
+						<td> {} </td>
+						<td> ; </td>
+						<td> äöüß </td>
+						<td> § </td>
+						<td> € </td>
+					</tr>
+					<!--                                          <>         []         {}         ;         äüöß        §          €      other people  -->
+					<tr> <th> Eng intl. AltGr dead keys </th> <td>🟩</td><td>🟩</td><td>🟩</td><td>🟩</td><td>🟨</td><td>🟥</td><td>🟨</td><td>🟨</td> </tr>
+					<tr> <th> US                        </th> <td>🟩</td><td>🟩</td><td>🟩</td><td>🟩</td><td>🟥</td><td>🟥</td><td>🟥</td><td>🟨</td> </tr>
+					<tr> <th> German                    </th> <td>🟩</td><td>🟨</td><td>🟨</td><td>🟩</td><td>🟩</td><td>🟩</td><td>🟩</td><td>🟩</td> </tr>
+
+				</table>
+				</>
+
+				<h3 id="japaneseinput"> Type Japanese </h3>
+				<p> Install <a href="https://github.com/ibus/ibus" target=_blank>IBus</a> with <a href="https://github.com/google/mozc" target=_blank>Mozk</a>:</p>
+				<code> sudo apt update && sudo apt install ibus ibus-mozc </code>
+				<p> Then set IBus as you input method framework and restart it: </p>
+				<code> im-config -n ibus && ibus restart</code>
+				<p> Open the IBus Preferences and set Japanese in the Input Method tab </p>
+				<code> ibus-setup </code>
+
+				<h3 id="capslock"> Map Caps-Lock to Escape</h3>
+				<p> In my opinion Caps-Lock has no right being that big of a key in a that well readable spot. The key would be better suited for the <code> escape </code> or <code> control </code> function.</p>
+				<p> Changing the key mapping depends heavily on the display manager. Sometimes it is possible to change the key mapping in the BIOS configuration. </p>
+				<h4> Gnome </h4>
+				<table> 
+					<tr> <th> Gnome </th> <td> <code> gsettings set org.gnome.desktop.input-sources xkb-options "['caps:escape']" </code> </td> </tr>
+					<tr> <th> Hyprland </th> <td> add the line <code> kb_options = caps:swapescape </code> to the <code> input {}</code> section of your <code> hyprland.conf </code>. </td> </tr>
+					<tr> <th> MacOS </th> <td> In MacOS the mapping can be changes in the normal settings but it has to be changes for every single (physical) keyboard you use. </td> </tr>
+				</table>
+				
+				
+
+				
+				<h2 id="ricing"> Ricing </h2>
+				<h3> Peak Minimalism </h3>
+				<h4> Remove the Firefox tab bar entirely </h4>
+ 
+				<img src="https://i.imgur.com/Tp7RtpN.jpeg" alt="firefox result"  style="width: min(400px, 80vw);">
+
+				<ol> 
+					<li>Enable user Chrome: enter <code>about:config</code> into the address bar, accept the risks.</li>
+					<li>Search for <code>toolkit.legacyUserProfileCustomizations.stylesheets</code> and toggle it to <code>true</code>.</li>
+					<li>Locate the profile folder by clicking on the "☰ " then "Help" then "Troubleshootin│g Information" and open it.</li>
+					<li>Create a new directory named <code>chrome</code>.</li>
+					<li>Inside the <code>chrome</code> directory, create two new files, <code>userChrome.css</code> and <code>userContent.css</code> (case sensitive).</li>
+					<li>Add the line <code>#TabsToolbar {visibility: collapse;}</code> or <code>TabsToolbar { visibility: collapse !important; }</code> if you only want to hide the tab bar and leave the navigation bar.</li>
+					<li>Save the file and restart Firefox.</li>
+				</ol> 
+
+
+
+			</main>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nice Bike Paths</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/3.0.2/Control.FullScreen.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/3.0.2/Control.FullScreen.min.js"></script>
+  <style>
+    #map { height: 600px; }
+  </style>
+</head>
+<body>
+
+<h1>Nice Bike Paths</h1>
+Work in progress --
+Work in progress --
+Work in progress --
+Work in progress --
+Work in progress
+<details> 
+	<summary> What is this? </summary>
+	<p> This is my personal collection of bike path that are enjoyable to ride. Most maps like CycleOSM make it hard to distinguish between a bike path  directly next to a street just separated by a row of trees of parking cars from a path where cars aren't visible at all. This site aims to collect only those routs. </p>
+</details>
+
+<div id="map"></div>
+
+<script>
+  const COLORS = ['green', 'red', 'blue', 'orange', 'purple'];
+
+  const map = L.map('map', { fullscreenControl: true }).setView([48, 10], 5);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  const allBounds = [];
+
+  fetch('data/index.json')
+    .then(function(r) { return r.json(); })
+    .then(function(files) {
+      files.forEach(function(filename, idx) {
+        const color = COLORS[idx % COLORS.length];
+
+        new L.GPX('data/' + filename, {
+          async: true,
+          marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
+          polyline_options: { color: color }
+        })
+        .on('loaded', function(e) {
+          const bounds = e.target.getBounds();
+          allBounds.push(bounds);
+          const combined = allBounds.reduce(function(acc, b) { return acc.extend(b); }, L.latLngBounds(allBounds[0]));
+          map.fitBounds(combined, { padding: [40, 40] });
+        })
+        .addTo(map);
+      });
+    });
+</script>
+
+</body>
+</html>

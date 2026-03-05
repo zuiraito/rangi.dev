@@ -1,193 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>【ラ】</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <header class="header">
-    <h1>◆ rangi.dev ◆</h1>
-    <p>I can't design PCBs.</p>
-    <nav>
-      <a href="../">【back】</a>
-    </nav>
-  </header>
-    <div class="gallery-container">
-        <div class="gallery" id="gallery">
-            <!-- Pins will be dynamically generated here -->
-		<noscript><p>javascript required</p></noscript>
+	<head>
+		<meta charset="UTF-8">
+		<title>rangi.dev</title>
+		<style>
+body { margin: 0; font-family: "Times New Roman", Times, serif; background: #ffffee; }
+.container { display: flex; min-height: 100vh; }
+aside { width: 220px; padding: 16px; border-right: 1px solid #000; background: #eeffee; }
+aside ul { list-style: none; padding: 0; margin: 0; }
+aside a { text-decoration: none; color: black; }
+main { flex: 1; padding: 24px; }
+h1::after{ display: block; content: ''; margin-top: 10px; border-bottom: 1px solid #000; }
+h2::after{ display: block; content: ''; margin-top: 3px; border-bottom: 1px solid #aaa; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+th { background: #eee; }
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<aside>
+				<a href="http://rangi.dev/" target="_blank">home</a>
+				<h2>How To's</h2>
+				<ul>
+					<li>
+						<a href="#media">Media</a>
+						<ul>
+							<li>├─<a href="#gif">create an animated gif</a></li>
+							<li>├─<a href="#compress">compress a directory</a></li>
+							<li>├─<a href="#combinePDF">combine pdfs</a></li>
+						</ul>
+					</li>
+					<li>
+						<a href="#network">Network</a>
+						<ul>
+							<li>├─<a href="#wifi">headless wifi</a></li>
+							<li>├─<a href="#eduroam">headless eduroam</a></li>
+							<li>├─<a href="#ssh">ssh</a></li>
+							<li>├─<a href="#ip">ip address stuff</a></li>
+						</ul>
+					</li>
+					<li> <a href="https://www.rangi.dev/howtos/linux">linux setup</a></li>
+				</ul>
+			</aside>
+			<main>
 
-        </div>
-    </div>
+				<h1 id="1">How To's</h1>
+				<h2 id="media"> Stuff to do with Media</h2>
+				<h3 id="gif">Create an Animaged GIF</h3>
+				<code>magick -delay 10 -loop 0 *.jpg -resize 800x600 -colors 1024 -layers Optimize output.gif</code>
 
-    <div class="modal" id="modal">
-        <div class="close-modal" onclick="closeModal()">✕</div>
-        <div class="modal-content">
-            <img src="" alt="" class="modal-image" id="modal-image">
-            <div class="modal-details">
-                <h2 class="modal-title" id="modal-title"></h2>
-                <p class="modal-description" id="modal-description"></p>
-            </div>
-        </div>
-    </div>
-	      
-</section>
+				<h3 id="compress">Compress a Directory</h3>
+				<table>
+					<tr>
+						<td>how to back up:</td>
+						<td><code>tar --use-compress-program="zstd -T0 -6" -cf /path/to/backup/location/backup-$(date -Iminute).tar.zst /path/to/data/that/you/want/to/back/up/</code></td>
+					</tr>
+					<tr>
+						<td>split the file for easier upload</td>
+						<td><code>split -b 5G -d --verbose backup.tar.zst backup.tar.zst.part</code></td>
+					</tr>
+					<tr>
+						<td>combine files again</td>
+						<td><code>cat backup.tar.zst.part* > backup.tar.zst</code></td>
+					</tr>
+					<tr>
+						<td>uncompress</td>
+						<td><code>tar -I zstd -xf backup.tar.zst</code></td>
+					</tr>
+				</table>
 
-	      
+				<h3 id="combinePDF">Combine PDFs</h3>
+				<code>pdftk * cat output output.pdf</code>
 
-    <script>
-        const pinsData = [
-	    {
-                id: 1,
-                title: "Create an Animated GIF",
-                imageUrl: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fmedia.tenor.com%2FhnzC7PXesr0AAAAC%2Fcats.gif&f=1&nofb=1&ipt=277662d36ae8489e8ecc22f9a8b2273099cdf6fab8fdc4c8dd49af3d88581060",
-		summary: "<code>magick -delay 10 -loop 0 *.jpg -resize 800x600 -colors 1024 -layers Optimize jio.gif</code>",
-                description: "<code>magick -delay 10 -loop 0 *.jpg -resize 800x600 -colors 1024 -layers Optimize jio.gif</code>",
-            },
-            {
-                id: 2,
-                title: "Archive Pictures",
-                imageUrl: "https://i.imgur.com/i4To5jA.png",
-		summary: "<code>tar -cf - Pictures/ | pv | zstd -T0 -19 -o 25-07-03_bilder.tar.zst</code>",
-                description: "<code>tar -cf - Pictures/ | pv | zstd -T0 -19 -o 25-07-03_bilder.tar.zst</code>",
-            },
-            {
-                id: 3,
-                title: "Combine PDFs",
-                imageUrl: "https://imgur.com/GeSPjW2",
-                imageUrl: "https://i.imgur.com/i4To5jA.png",
-		summary: "pdftk * cat output OUTPUT.pdf",
-                description: "pdftk * cat output OUTPUT.pdf"
-            },
-            {
-                id: 4,
-                title: "Headless WiFi",
-                imageUrl: "https://i.imgur.com/i4To5jA.png",
-		summary: "<code>nmcli d wifi list<br>nmcli d wifi connect SSID password PW</code>",
-		description: "<code>nmcli d wifi list<br>nmcli d wifi connect SSID password PW</code>",
-            },
-            {
-                id: 5,
-                title: "Headless Eduroam",
-                imageUrl: "https://i.imgur.com/i4To5jA.png",
-		summary: "We all love eduroam",
-		description: `<code class="code-block"><br>nmcli con add type wifi con-name "eduroam" ifname wlan0 ssid "eduroam" \<br>    802-1x.eap peap \<br>    802-1x.phase2-auth mschapv2 \<br>    802-1x.identity "my_username" \<br>    802-1x.password "my_password" \<br>    wifi-sec.key-mgmt wpa-eap \<br>    802-1x.ca-cert "/etc/ssl/certs/ca-certificates.crt"<br><br>nmcli con up "eduroam"</pre></code>`,
-            },
-            {
-                id: 6,
-                title: "SSH",
-                imageUrl: "https://i.imgur.com/i4To5jA.png",
-		summary: "i'm in...",
-		description: `<code class="code-block"><br># Installation<br>sudo apt install openssh-server<br><br>sudo systemctl status ssh<br><br># connection<br>ssh user@ip<br># find ip<br><br>ip a</pre></code>r`,
-            },
-            {
-                id: 7,
-                title: "USB Installation Media",
-                imageUrl: "https://i.imgur.com/i4To5jA.png",
-		summary: "The first step",
-		description: `<pre><code class="code-block"><br># Storage device finden<br>lsblk<br><br># Wenn .img.xz muss man die Datei decompressen<br>xy -d path/to/image.img.xz<br><br># Flashen<br>sudo dd if=path/to/your/image.img of=/dev/sdX bs=4M status=progress<br>sync</pre></code>`,
-            },
-	    {
-                id: 8,
-                title: "Remove the Firefox tab bar entirely",
-                imageUrl: "https://i.imgur.com/Tp7RtpN.jpeg",
-		summary: "Peak digital minimalism.",
-                description: `<ol> <li>Enable user Chrome: enter <code>about:config</code> into the address bar, accept the risks.</li> <li>Search for <code>toolkit.legacyUserProfileCustomizations.stylesheets</code> and toggle it to <code>true</code>.</li>                  <li>Locate the profile folder by clicking on the "☰" then "Help" then "Troubleshooting Information" and open it.</li>                  <li>Create a new directory named <code>chrome</code>.</li>                  <li>Inside the <code>chrome</code> directory, create two new files, <code>userChrome.css</code> and <code>userContent.css</code> (case sensitive).</li>                  <li>Add the line <code>#TabsToolbar {visibility: collapse;}</code> or <code>TabsToolbar { visibility: collapse !important; }</code> if you only want to hide the tab bar and leave the navigation bar.</li>                  <li>Save the file and restart Firefox.</li>                  </ol>                <p style='text-align:right; color:LightGray;'>(2025-08-03)</p>`
-            },
-            {
-                id: 9,
-                title: "Map Caps-Lock to Esc in gnome",
-                imageUrl: "https://i.imgur.com/i4To5jA.png",
-		summary: `
-			gsettings set org.gnome.desktop.input-sources xkb-options \"['caps:escape']\"",
-                description: "<p style='text-align:right; color:LightGray;'>
-			gsettings set org.gnome.desktop.input-sources xkb-options \"['caps:escape']\"
-			(date)</p>`
-            },
-/*
-            {
-                id: ,
-                title: "",
-                imageUrl: "",
-		summary: "",
-                description: "<p style='text-align:right; color:LightGray;'>(date)</p>"
-            },
-*/
-                    ];
+				<h2 id="network"> Stuff to do with Networks</h2>
 
-function generatePins() {
-    const gallery = document.getElementById('gallery');
-    gallery.innerHTML = ''; // Clear gallery first if needed
+				<h3 id="wifi">Set up a WIFI Connection in the Terminal</h3>
+				<table> 
+					<tr> <td> List available networks </td> <td> <code> nmcli d wifi l </code> </td> </tr>
+					<tr> <td> Connect to network </td> <td> <code> nmcli d wifi c [ssid] p [password] </code> </td> </tr>
+					<tr> <td> Switch network </td> <td> <code> nmcli c up [ssid] </code> </td> </tr>
+					<tr> <td> Delete network </td> <td> <code> nmcli c delete [ssid] </code> </td> </tr>
+				</table>
 
-    // Sort pinsData by id descending (highest id first)
-    const sortedPins = pinsData.slice().sort((a, b) => b.id - a.id);
+				<h3 id="eduroam">Set up Eduroam in the Terminal</h3>
+				<code>
+					nmcli con add type wifi con-name "eduroam" ifname wlan0 ssid "eduroam" \				</code><br><code>
+					802-1x.eap peap \				</code><br><code>
+					802-1x.phase2-auth mschapv2 \				</code><br><code>
+					802-1x.identity "my_username" \				</code><br><code>
+					802-1x.password "my_password" \				</code><br><code>
+					wifi-sec.key-mgmt wpa-eap \				</code><br><code>
+					802-1x.ca-cert "/etc/ssl/certs/ca-certificates.crt"				</code>
+				<p>Then you can use nmcli to start the connection: <code>nmcli con up "eduroam"</code></p>
+					
+				<h3 id="ssh">SSH</h3>
+				<table>
+					<tr><td>Installation</td><td><code>sudo apt install openssh-server</code></td></tr>
+					<tr><td>Auto start</td><td><code>sudo systemctl status ssh</code></td></tr>
+					<tr><td>Establish connection</td><td><code>ssh [username]@[ip]</code></td></tr>
+				</table>
 
-    sortedPins.forEach(pin => {
-        const pinElement = document.createElement('div');
-        pinElement.className = 'pin';
-        pinElement.setAttribute('data-id', pin.id);
-        pinElement.innerHTML = `
-            <div class="pin-title">${pin.title}</div>
-            <img src="${pin.imageUrl}" alt="${pin.title}">
-            <div class="pin-summary">${pin.summary}</div>
-        `;
-        pinElement.addEventListener('click', () => openModal(pin));
-        gallery.appendChild(pinElement);
-    });
-}
-function generateSelectedPins(ids, targetId) {
-    const gallery = document.getElementById(targetId);
-    gallery.innerHTML = ''; // Clear existing pins if any
-
-    // Filter pins that match the provided IDs
-    const selectedPins = pinsData.filter(pin => ids.includes(pin.id));
-
-    selectedPins.forEach(pin => {
-        const pinElement = document.createElement('div');
-        pinElement.className = 'pin';
-        pinElement.setAttribute('data-id', pin.id);
-        pinElement.innerHTML = `
-            <div class="pin-title">${pin.title}</div>
-            <img src="${pin.imageUrl}" alt="${pin.title}">
-            <div class="pin-summary">${pin.summary}</div>
-        `;
-        pinElement.addEventListener('click', () => openModal(pin));
-        gallery.appendChild(pinElement);
-    });
-}
+				<h3 id="ip">IP Address stuff</h3>
+				<table>
+					<tr> <td> Find you own IP </td> <td> <code> ip a </code> </td> </tr>
+					<tr> <td> Find IPs in the network </td> <td> <code> nmap -sP [your ip/xx] </code> </td></tr>
+				</table>
+				
+ip a
 
 
-        function openModal(pin) {
-            document.getElementById('modal-image').src = pin.imageUrl;
-            document.getElementById('modal-title').textContent = pin.title;
-            document.getElementById('modal-description').innerHTML = pin.description;
-            document.getElementById('modal').style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
 
-        function closeModal() {
-            document.getElementById('modal').style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-
-        window.addEventListener('click', function(event) {
-            if (event.target === document.getElementById('modal')) {
-                closeModal();
-            }
-        });
-
-window.onload = function () {
-    generatePins();
-    generateSelectedPins([1, 2, 3], 'coding-gallery');
-    generateSelectedPins([4], 'engineering-gallery');
-};
-
-    </script>
-  <footer class="footer">
-    <p>© 2025 Rangi Siebert</p>
-  </footer>
-</body>
+			</main>
+		</div>
+	</body>
 </html>
-
