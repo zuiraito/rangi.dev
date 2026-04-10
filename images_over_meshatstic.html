@@ -1,0 +1,136 @@
+
+<h2>Meshtastic Image Compressor</h2>
+<input type="file" id="fileInput" accept="image/*">
+<br><br>
+<div id="results"></div>
+
+<hr>
+
+<h2>Decode image</h2>
+<p>Paste messages below, one per line:</p>
+<textarea id="decodeInput" rows="8" cols="60" placeholder="1/6: /9j/4AAQSkZJRgAB...
+2/6: /9j/...
+3/6: ..."></textarea>
+<br>
+<button onclick="decodeImage()">Decode</button>
+<br><br>
+<div id="decodeResult"></div>
+
+<script>
+const CONFIGS = [3,4,5,6];
+const CHARS_PER_MSG = 200;
+const PREFIX_OVERHEAD = 6;
+
+function maxBytes(msgs) {
+  return Math.floor((msgs * CHARS_PER_MSG - msgs * PREFIX_OVERHEAD) * 6 / 8);
+}
+
+function toBase64(buf) {
+  let bin = '';
+  new Uint8Array(buf).forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+
+function chunkBase64(b64, msgs) {
+  const size = Math.ceil(b64.length / msgs);
+  const out = [];
+  for (let i = 0; i < msgs; i++) {
+    const part = b64.slice(i * size, (i+1) * size);
+    if (part) out.push(`${i+1}/${msgs}: ${part}`);
+  }
+  return out;
+}
+
+async function compressToBytes(img, targetBytes) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  let best = null, bestSize = Infinity;
+  for (let dim = 64; dim >= 8; dim -= 4) {
+    for (let q = 0.5; q >= 0.05; q -= 0.05) {
+      canvas.width = canvas.height = dim;
+      ctx.drawImage(img, 0, 0, dim, dim);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', q));
+      const buf = await blob.arrayBuffer();
+      if (buf.byteLength <= targetBytes) return { buf, dim, q, bytes: buf.byteLength };
+      if (buf.byteLength < bestSize) { bestSize = buf.byteLength; best = { buf, dim, q, bytes: buf.byteLength }; }
+    }
+  }
+  return best;
+}
+
+document.getElementById('fileInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = async () => {
+    const out = document.getElementById('results');
+    out.innerHTML = 'Compressing...';
+    let html = `<p>Original: ${img.naturalWidth}x${img.naturalHeight}px, ${(file.size/1024).toFixed(1)}KB</p><hr>`;
+    window._chunks = {};
+    for (const msgs of CONFIGS) {
+      const target = maxBytes(msgs);
+      const result = await compressToBytes(img, target);
+      const b64 = toBase64(result.buf);
+      const chunks = chunkBase64(b64, msgs);
+      window._chunks[msgs] = chunks;
+      const fits = result.bytes <= target;
+      const blobUrl = URL.createObjectURL(new Blob([result.buf], {type:'image/jpeg'}));
+      html += `<h3>${msgs} messages (${msgs*CHARS_PER_MSG} chars max)</h3>`;
+      html += `<img src="${blobUrl}" width="48" height="48" style="image-rendering:pixelated">`;
+      html += ` ${result.dim}x${result.dim}px, JPEG q${Math.round(result.q*100)}%, ${result.bytes}B — `;
+      html += fits ? '<b>fits</b>' : `<b>OVER by ${result.bytes - target}B</b>`;
+      html += '<br><br>';
+      chunks.forEach((chunk, i) => {
+        const id = `chunk-${msgs}-${i}`;
+        html += `<b>Message ${i+1}/${msgs}</b> (${chunk.length} chars)
+          <button onclick="copyChunk('${id}')">copy</button><br>
+          <textarea id="${id}" rows="3" cols="60" readonly>${chunk}</textarea><br><br>`;
+      });
+      html += '<hr>';
+    }
+    out.innerHTML = html;
+  };
+  img.src = url;
+});
+
+function copyChunk(id) {
+  const el = document.getElementById(id);
+  navigator.clipboard.writeText(el.value);
+}
+
+function decodeImage() {
+  const raw = document.getElementById('decodeInput').value.trim();
+  const out = document.getElementById('decodeResult');
+  if (!raw) { out.innerHTML = '<i>Nothing to decode.</i>'; return; }
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const parts = {};
+  let total = null;
+
+  for (const line of lines) {
+    const match = line.match(/^(\d+)\/(\d+):\s*(.+)$/);
+    if (!match) { out.innerHTML = `<b>Error:</b> could not parse line: <code>${line}</code>`; return; }
+    const [, idx, tot, data] = match;
+    if (total === null) total = parseInt(tot);
+    else if (parseInt(tot) !== total) { out.innerHTML = '<b>Error:</b> mismatched total message counts.'; return; }
+    parts[parseInt(idx)] = data;
+  }
+
+  for (let i = 1; i <= total; i++) {
+    if (!parts[i]) { out.innerHTML = `<b>Error:</b> missing message ${i}/${total}.`; return; }
+  }
+
+  const b64 = Array.from({length: total}, (_, i) => parts[i+1]).join('');
+  try {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], {type: 'image/jpeg'});
+    const url = URL.createObjectURL(blob);
+    out.innerHTML = `<p>Decoded ${total} messages, ${bytes.length} bytes:</p><br><img src="${url}" style="image-rendering:pixelated; border: 1px solid black;">`;
+  } catch(e) {
+    out.innerHTML = `<b>Error decoding base64:</b> ${e.message}`;
+  }
+}
+</script>
