@@ -17,7 +17,7 @@
 <div id="decodeResult"></div>
 
 <script>
-const CONFIGS = [3,4,5,6];
+const CONFIGS = [4,5,6,7];
 const CHARS_PER_MSG = 200;
 const PREFIX_OVERHEAD = 6;
 
@@ -36,7 +36,7 @@ function chunkBase64(b64, msgs) {
   const out = [];
   for (let i = 0; i < msgs; i++) {
     const part = b64.slice(i * size, (i+1) * size);
-    if (part) out.push(`${i+1}/${msgs}: ${part}`);
+    if (part) out.push(`${i+1}/${msgs}:_${part}`);
   }
   return out;
 }
@@ -109,7 +109,7 @@ function decodeImage() {
   let total = null;
 
   for (const line of lines) {
-    const match = line.match(/^(\d+)\/(\d+):\s*(.+)$/);
+    const match = line.match(/^(\d+)\/(\d+):_*(.+)$/);
     if (!match) { out.innerHTML = `<b>Error:</b> could not parse line: <code>${line}</code>`; return; }
     const [, idx, tot, data] = match;
     if (total === null) total = parseInt(tot);
