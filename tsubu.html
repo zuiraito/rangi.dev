@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>rangi.dev tsubu</title>
+  <style>
+    body { margin: 0; font-family: "Times New Roman", Times, serif; background: #ffffee; }
+    .container { display: flex; min-height: 100vh; }
+    aside { width: 220px; padding: 16px; border-right: 1px solid #000; background: #eeffee; flex-shrink: 0; }
+    aside ul { list-style: none; padding: 0; margin: 0; }
+    aside a { text-decoration: none; color: black; }
+    main { flex: 1; padding: 24px; max-width: 680px; }
+    h1::after { display: block; content: ''; margin-top: 10px; border-bottom: 1px solid #000; }
+    h2::after { display: block; content: ''; margin-top: 3px; border-bottom: 1px solid #aaa; }
+
+    .intro {
+      margin-bottom: 28px;
+      line-height: 1.6;
+      font-size: 0.97em;
+      color: #333;
+    }
+    .intro a {
+      color: black;
+    }
+
+    .posts { display: flex; flex-direction: column; gap: 16px; }
+
+    .post {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 16px 20px;
+      line-height: 1.65;
+    }
+    .post-meta {
+      font-size: 0.78em;
+      color: #888;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside>
+      <a href="http://rangi.dev/" target="_blank">home</a>
+      <h2>Contents</h2>
+      <ul>
+        <li><a href="#">tsubu</a></li>
+      </ul>
+    </aside>
+    <main>
+      <h1>tsubu</h1>
+
+      <p class="intro">
+        A collection of short tsubu (粒(jp. snippet)) of text like quotes, thoughts, poetry, whatever. If you want to add something, <a href="mailto:rangi@fridi.de?subject=rangi.dev/tsubu%20submission">use this link</a> (I only know how to make a static website so e-mail it is). Also this is definitely not inspired by twitter.
+      </p>
+
+      <div class="posts">
+
+<!--Post Template:
+
+        <div class="post"><p>
+						Texttexttext				</p><div class="post-meta">
+					  Source				</div></div>
+
+-->
+
+        <div class="post"><p>
+					Oh I'd wrap my car around a tree to prove <br>That I am driging under the influence - of you.</p><div class="post-meta">
+					Lyric: Any Two Words - If Affected, do not Drive a Motor Vehicle or Operate Machinery</div></div>
+
+        <div class="post"><p>
+					Euch gehören die Uhren <br> Doch uns gehört die Zeit</p><div class="post-meta">
+					Lyric: Das Lumpenpack - Kruppstahl, Baby</div></div>
+
+      </div>
+    </main>
+  </div>
+</body>
+</html>
