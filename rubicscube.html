@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>rangi.dev</title>
+  <style>
+		body { margin: 0; font-family: "Times New Roman", Times, serif; background: #ffffee; }
+  		.container { display: flex; min-height: 100vh; }
+  	aside { width: 220px; padding: 16px; border-right: 1px solid #000; background: #eeffee; }
+  		aside ul { list-style: none; padding: 0; margin: 0; }
+  		aside a { text-decoration: none; color: black; }
+  	main { flex: 1; padding: 24px; }
+  	h1::after{ display: block; content: ''; margin-top: 10px; border-bottom: 1px solid #000; }
+  	h2::after{ display: block; content: ''; margin-top: 3px; border-bottom: 1px solid #aaa; }
+		table { border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+    th { background: #eee; }
+		code { background-color: #f3f3f3; padding: 2px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside>
+      <a href="http://rangi.dev/" target="_blank">home</a>
+    </aside>
+		<main>
+
+<h1> Basic Algorythms </h1>
+<h2> The Notation </h2>
+<ul> 
+	<li> A single letter by itself refers to a clockwise face rotation in 90 degrees. F, R, U, L, B, D - front, right, upfacing side, left, back side, downfacing side</li>
+	<li> A letter followed by an apostrophe means to turn that face counterclockwise 90 degrees. </li>
+	<li> A letter with the number 2 after it marks a double turn.  </li>
+</ul>
+<table> 
+	<tr> 
+		<th> Name </th>
+		<th> Moves </th>
+		<th> Discription </th>
+	</tr>
+	<tr> 
+		<th> Sune </th>
+		<td> R U R' U R U2 R' </td>
+		<td> Sune is an OLL algorithm, which means it orients the last layer. It is part of a special subcategory called OCLL, which means that it only orients the corners (is used when all edges are oriented). It was proposed by Lars Petrus in his Petrus method. </td>
+	</tr>
+	<tr> 
+		<th> Anti-Sune </th>
+		<td> R U2 R' U' R U' R' </td>
+		<td> As referenced by the name, Anti-Sune is the opposite of Sune. It is still an OCLL, but the algorithm is mirrored. It was also coined by Petrus in the method of the same name. </td>
+	</tr>
+	<tr> 
+		<th> Sledgehammer </th>
+		<td> R' F R F' </td>
+		<td> This is a trigger that is used in a lot of algorithms, and in F2L. It also has a much lesser-known reverse, hedgeslammer. If repeated 6 times, it will bring the cube back to its previous state. </td>
+	</tr>
+	<tr> 
+		<th> Sexy Move </th>
+		<td> R U R' U' </td>
+		<td> This is another trigger that is heavily used in almost everything. You can find it in F2L, OLL, and PLL and, if repeated 6 times on a cube, will bring it back to the same state it was in before. </td>
+	</tr>
+	<tr> 
+		<th> Reverse Sexy </th>
+		<td> U R U' R' </td>
+		<td> This is, as the name implies, the reverse of sexy. It is less used, but is still quite prominent in F2L, where the triple sexy is frequently replaced with triple reverse sexy as it is said to be quicker. Either way, if repeated 6 times it will bring the cube back to its original state, as with most 6 move triggers. </td>
+	</tr>
+	<tr> 
+		<th> U Perms </th>
+		<td> Ua: M2 U M U2 M' U M2 <br> Ub: M2 U' M U2 M' U' M2 </td>
+		<td> This is a PLL (Position Last Layer) algorithm. There are 2 variants, the Ua and Ub perms. They are used when all the corners are permuted and there are 3 edges to permute in a triangular fashion. Doing either one 3 times will bring the cube back to its original state and executing either one once will make the case that the other one solves. </td>
+	</tr>
+	<tr> 
+		<th> T Perm </th>
+		<td> R U R' U' R' F R2 U' R' U' R U R' F' </td>
+		<td> The T perm is perhaps the most well-known PLL algorithm, with its only competition being the U perms (above) and the J perms (below). It is used to permute 2 opposite edges and two adjacent corners, and the shape of those pieces to permute when viewed from above makes a T, hence the name. </td>
+	</tr>
+	<tr> 
+		<th> J Perms </th>
+		<td> Ja: R' U L' U2 R U' R' U2 R L or L' U' L F L' U' L U L F' L2' U L U<br>Jb: R U R' F' R U R' U' R' F R2 U' R' U' </td>
+		<td> These are 2 PLL algorithms that permute 2 adjacent edges and 2 adjacent corners. It is recognisable by the sheer number of blocks it has. There is one solved line, and 2 unsolved blocks. The Jb tends to be the faster one, as it is an RUF algorithm, but the Ja – being either an RUL or LUF algorithm – can also be very fast with practice. </td>
+	</tr>
+	<tr> 
+		<th> H Perm </th>
+		<td> M2' U' M2' U2' M2' U' M2' </td>
+		<td> The H perm is a PLL algorithm that swaps 2 sets of opposite edges. All the corners are already solved. The directions of the U turns can be switched. </td>
+	</tr>
+	<tr> 
+		<th> Key (OLL 33) </th>
+		<td> R U R' U' R' F R F' </td>
+		<td> This OLL looks like a T when viewed from the top. It is not the only OLL to look like this but it is recognizable from the two opposite facing blocks that the unoriented pieces make. </td>
+	</tr>
+	<tr> 
+		<th> Bottlecap (OLL 51) </th>
+		<td> f ( R U R' U' ) ( R U R' U' ) f' or F U R U' R' U R U' R' F' </td>
+		<td> This OLL is a very famous one, and a good example of an OLL that contains the ‘sexy' trigger. It is a Line case, and it has 2 opposing edge and corner blocks, along with two adjacent corners that make headlights. </td>
+	</tr>
+	<tr> 
+		<th> T (OLL 45) </th>
+		<td> F R U R' U' F' </td>
+		<td> This OLL is probably one of the most famous out of all the full algorithms. It is 6 moves long, and the other T shaped algorithm in addition to Key, above. The main body of the algorithm is the sexy trigger. </td>
+	</tr>
+	<tr> 
+		<th> Checkerboard </th>
+		<td> M2 E2 S2 or R2 L2 U2 D2 F2 B2 </td>
+		<td> This is a pattern but has a famous algorithm to make it. This is quite an intuitive algorithm, and one that many beginner cubers will be taught or figure out or see done. </td>
+	</tr>
+	<tr> 
+		<th> Z Perm </th>
+		<td> M' U' M2' U' M2' U' M' U2 M2' U </td>
+		<td> This permutation is a PLL algorithm. It switches two sets of adjacent edges. All the corners are already solved when this algorithm is used. It is used in every method that forces an EPLL (a PLL of only the edges, in other words, all corners are pre-solved) including Petrus. </td>
+	</tr>
+</table>
+<h2> F2L </h2>
+I'm not going to write this down, there is not that much thinking involved in solving F2L
+
+<h1> What next?</h1>
+			This learning order is suggested by J Perm with regards to complexity compared to it's value when it comes to the CFOP Speedcubing Method
+			<ol> 
+				<li> F2L </li>
+				<li> PLL </li>
+				<li> Finger Tricks </li>
+				<li> Cross </li>
+				<li> Look Ahead </li>
+				<li> OLL </li>
+				<li> Extra Algs </li>
+				<li> Cross+1 </li>
+
+    </main>
+  </div>
+</body>
+</html>
