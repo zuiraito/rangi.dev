@@ -25,6 +25,21 @@
     </aside>
 		<main>
 
+<h1> Solving </h1>
+<ol> 
+	<li> Make a cross on one side, then fill in the corners (the first step should be intuitive) </li>
+	<li> 
+		With the solved side towards the bottom, bring find an edge for the middle layer and bring it above its correct color if it has to go the... <br>
+		...left: U' L' U L U F U' F'<br>
+		...right: U R U' R' U' F' U F
+	</li>
+	<li> Position the corners: With the unsolved side up you can switch the two corners facing you with L' U' L F U F' L' U L U U. If you want to switch both the front two corners and the back two corners: do L' U' L F U U F' L' U L </li>
+	<li> Orient the corners: Rotate all corners except of the front left clockwise with R U R' U R U U R' U U <br> or all corners exept the front right counter clockwise with L' U' L U' L' U' U' L U' U'</li>
+	<li> Position the edges: Rotate every corner exept the one facing you counterclockwise with M U' M' U' U' M U' M' <br> or counterclockwise with M U M' U U M U M'></li>
+	<li> Orient the edges: Turn the left and right edge with R' Ml R R Mr Mr R' U U R Mr Mr R' R' Mr R U U <br> and/or turn the front and the left edge F Ml R R Mr Mr R' U U R Mr Mr R' R' Mr R U U R' F'</li>
+</ol>
+
+
 <h1> Basic Algorythms </h1>
 <h2> The Notation </h2>
 <ul> 
@@ -109,8 +124,6 @@
 		<td> This permutation is a PLL algorithm. It switches two sets of adjacent edges. All the corners are already solved when this algorithm is used. It is used in every method that forces an EPLL (a PLL of only the edges, in other words, all corners are pre-solved) including Petrus. </td>
 	</tr>
 </table>
-<h2> F2L </h2>
-I'm not going to write this down, there is not that much thinking involved in solving F2L
 
 <h1> What next?</h1>
 			This learning order is suggested by J Perm with regards to complexity compared to it's value when it comes to the CFOP Speedcubing Method
