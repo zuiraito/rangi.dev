@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Slot Machine</title>
+<style>
+  .reels {
+    display: flex;
+  }
+  .reel {
+    width: 40px;
+    height: 120px;
+    overflow: hidden;
+    border: 1px solid black;
+    margin-right: 4px;
+  }
+  .strip {
+    transition: transform 1s ease-out;
+  }
+  .strip div {
+    height: 40px;
+    line-height: 40px;
+    text-align: center;
+  }
+  #graph {
+    border: 1px solid black;
+  }
+</style>
+</head>
+<body>
+
+<h1>Slot Machine</h1>
+
+<p>Moneten: <span id="money">10</span></p>
+
+<h3>History</h3>
+<svg id="graph" width="600" height="200"></svg>
+
+
+<details>
+  <summary>Rules</summary>
+  <ul>
+    <li>Each spin costs 1 money (the bet is always 1).</li>
+    <li>Numbers are 0 through 9.</li>
+    <li>Funny number: the three digits read together form a special number (like 69, 420, 67, 666, 42, 13, 314). Pays 50. (about a 0.7% chance)</li>
+    <li>Three of a kind: all three numbers match. Pays 40. (about a 0.9% chance)</li>
+    <li>Straight: three numbers in a row, ascending or descending (like 3-4-5 or 5-4-3). Pays 20. (about a 1.6% chance)</li>
+    <li>All odd / all even: all three numbers are odd, or all three are even (and not already a straight/triple/funny number). Pays 6. (about a 6% chance each)</li>
+    <li>Center shot: left and right numbers match. Pays out an amount equal to the center number. (about a 9% chance)</li>
+    <li>Double: any other two matching numbers. Pays 2. (about an 18% chance)</li>
+    <li>No match: you lose your bet. (about a 55% chance)</li>
+  </ul>
+</details>
+
+
+<div class="reels">
+  <div class="reel"><div class="strip" id="strip0"></div></div>
+  <div class="reel"><div class="strip" id="strip1"></div></div>
+  <div class="reel"><div class="strip" id="strip2"></div></div>
+</div>
+
+<p>
+  <button id="spinButton" onclick="spin()">Spin</button>
+</p>
+
+<p id="message"></p>
+<script>
+var money = 10;
+var cellHeight = 40;
+var spinCount = 0;
+var gameHistory = [{ spin: 0, money: money }];
+var FUNNY_NUMBERS = [69, 420, 67, 666, 42, 13, 314];
+
+document.getElementById("money").innerText = money;
+
+function buildStrip(stripEl, finalNumber, extraSpins) {
+  // sequence of numbers 0-9 repeated many times
+  var repeats = 12;
+  var values = [];
+  for (var r = 0; r < repeats; r++) {
+    for (var n = 0; n <= 9; n++) {
+      values.push(n);
+    }
+  }
+
+  stripEl.innerHTML = "";
+  for (var i = 0; i < values.length; i++) {
+    var cell = document.createElement("div");
+    cell.innerText = values[i];
+    stripEl.appendChild(cell);
+  }
+
+  // find an index k such that values[k+1] === finalNumber, plus extra spins
+  var k = (finalNumber - 1) + 10 * extraSpins;
+
+  stripEl.style.transition = "none";
+  stripEl.style.transform = "translateY(0px)";
+  stripEl.offsetHeight; // force reflow
+
+  stripEl.style.transition = "transform 1s ease-out";
+  stripEl.style.transform = "translateY(-" + (k * cellHeight) + "px)";
+}
+
+function isTriple(a, b, c) {
+  return a === b && b === c;
+}
+
+function isStraight(a, b, c) {
+  return (b - a === 1 && c - b === 1) || (a - b === 1 && b - c === 1);
+}
+
+function isAllOdd(a, b, c) {
+  return a % 2 === 1 && b % 2 === 1 && c % 2 === 1;
+}
+
+function isAllEven(a, b, c) {
+  return a % 2 === 0 && b % 2 === 0 && c % 2 === 0;
+}
+
+function isCenterShot(a, b, c) {
+  return a === c;
+}
+
+function isDouble(a, b, c) {
+  return (a === b && b !== c) || (b === c && a !== b);
+}
+
+function evaluate(a, b, c) {
+  var num = a * 100 + b * 10 + c;
+
+  if (FUNNY_NUMBERS.indexOf(num) !== -1) {
+    return { payout: 50, message: "hihi, 50!" };
+  } else if (isTriple(a, b, c)) {
+    return { payout: 40, message: "Three of a kind! You won 40!" };
+  } else if (isStraight(a, b, c)) {
+    return { payout: 20, message: "Straight! You won 20!" };
+  } else if (isAllOdd(a, b, c)) {
+    return { payout: 6, message: "All odd! You won 6!" };
+  } else if (isAllEven(a, b, c)) {
+    return { payout: 6, message: "All even! You won 6!" };
+  } else if (isCenterShot(a, b, c)) {
+    return { payout: b, message: "Center shot! You win " + b + "!" };
+  } else if (isDouble(a, b, c)) {
+    return { payout: 2, message: "Double! You won 2!" };
+  } else {
+    return { payout: 0, message: "No match. womp womp." };
+  }
+}
+
+function drawGraph() {
+  var svgNS = "http://www.w3.org/2000/svg";
+  var width = 600, height = 200, padding = 35;
+  var svg = document.getElementById("graph");
+  svg.innerHTML = "";
+
+  var moneys = gameHistory.map(function (h) { return h.money; });
+  var maxMoney = Math.max.apply(null, moneys);
+  var minMoney = 0;
+  if (maxMoney === minMoney) {
+    maxMoney = minMoney + 1;
+  }
+  var maxSpin = gameHistory.length - 1;
+  if (maxSpin === 0) {
+    maxSpin = 1;
+  }
+
+  function xScale(spin) {
+    return padding + (spin / maxSpin) * (width - 2 * padding);
+  }
+  function yScale(m) {
+    return height - padding - ((m - minMoney) / (maxMoney - minMoney)) * (height - 2 * padding);
+  }
+
+  var xAxis = document.createElementNS(svgNS, "line");
+  xAxis.setAttribute("x1", padding);
+  xAxis.setAttribute("y1", height - padding);
+  xAxis.setAttribute("x2", width - padding);
+  xAxis.setAttribute("y2", height - padding);
+  xAxis.setAttribute("stroke", "black");
+  svg.appendChild(xAxis);
+
+  var yAxis = document.createElementNS(svgNS, "line");
+  yAxis.setAttribute("x1", padding);
+  yAxis.setAttribute("y1", padding);
+  yAxis.setAttribute("x2", padding);
+  yAxis.setAttribute("y2", height - padding);
+  yAxis.setAttribute("stroke", "black");
+  svg.appendChild(yAxis);
+
+  var xLabel = document.createElementNS(svgNS, "text");
+  xLabel.setAttribute("x", width / 2);
+  xLabel.setAttribute("y", height - 5);
+  xLabel.setAttribute("text-anchor", "middle");
+  xLabel.setAttribute("font-size", "12");
+  xLabel.textContent = "Spin count (" + maxSpin + ")";
+  svg.appendChild(xLabel);
+
+  var yLabel = document.createElementNS(svgNS, "text");
+  yLabel.setAttribute("x", 5);
+  yLabel.setAttribute("y", 15);
+  yLabel.setAttribute("font-size", "12");
+  yLabel.textContent = "Money";
+  svg.appendChild(yLabel);
+
+  var maxLabel = document.createElementNS(svgNS, "text");
+  maxLabel.setAttribute("x", padding + 2);
+  maxLabel.setAttribute("y", padding - 5);
+  maxLabel.setAttribute("font-size", "10");
+  maxLabel.textContent = maxMoney;
+  svg.appendChild(maxLabel);
+
+  var minLabel = document.createElementNS(svgNS, "text");
+  minLabel.setAttribute("x", padding + 2);
+  minLabel.setAttribute("y", height - padding - 3);
+  minLabel.setAttribute("font-size", "10");
+  minLabel.textContent = minMoney;
+  svg.appendChild(minLabel);
+
+  var points = gameHistory.map(function (h) {
+    return xScale(h.spin) + "," + yScale(h.money);
+  }).join(" ");
+
+  var polyline = document.createElementNS(svgNS, "polyline");
+  polyline.setAttribute("points", points);
+  polyline.setAttribute("fill", "none");
+  polyline.setAttribute("stroke", "black");
+  svg.appendChild(polyline);
+}
+
+function spin() {
+  if (money < 1) {
+    document.getElementById("message").innerText = "You are NOT a good gambler, maybe tomorrow";
+    return;
+  }
+
+  document.getElementById("spinButton").disabled = true;
+  money = money - 1;
+  document.getElementById("money").innerText = money;
+  document.getElementById("message").innerText = "";
+
+  var results = [];
+  for (var i = 0; i < 3; i++) {
+    results.push(Math.floor(Math.random() * 10));
+  }
+
+  var strips = [document.getElementById("strip0"), document.getElementById("strip1"), document.getElementById("strip2")];
+  for (var i = 0; i < 3; i++) {
+    buildStrip(strips[i], results[i], 6 + i);
+  }
+
+  setTimeout(function () {
+    var outcome = evaluate(results[0], results[1], results[2]);
+
+    money = money + outcome.payout;
+    document.getElementById("money").innerText = money;
+    document.getElementById("message").innerText = outcome.message;
+    document.getElementById("spinButton").disabled = false;
+
+    spinCount = spinCount + 1;
+    gameHistory.push({ spin: spinCount, money: money });
+    drawGraph();
+
+    if (money < 1) {
+      document.getElementById("message").innerText += " You are NOT a good gambler, maybe tomorrow";
+    }
+  }, 1000);
+}
+
+window.onload = function () {
+  var strips = [document.getElementById("strip0"), document.getElementById("strip1"), document.getElementById("strip2")];
+  for (var i = 0; i < 3; i++) {
+    buildStrip(strips[i], Math.floor(Math.random() * 10), 0);
+  }
+  drawGraph();
+};
+</script>
+
+</body>
+</html>
