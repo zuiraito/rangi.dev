@@ -16,8 +16,6 @@
     th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
     th { background: #eee; }
     code { background-color: #f3f3f3; padding: 2px; }
-    #drop { border: 1px dashed #000; padding: 24px; text-align: center; max-width: 400px; }
-    #drop.over { background: #eee; }
     #result { margin-top: 16px; word-break: break-all; }
     #preview { margin-top: 16px; max-width: 400px; border: 1px solid #ccc; background: #fff; padding: 8px; }
     #preview img { display: block; max-width: 100%; margin-bottom: 8px; }
@@ -33,27 +31,18 @@
         <li>
           <a href="#1">Recipe roller</a>
           <ul>
-            <li>├─<a href="#1.1">Upload</a></li>
-            <li>└─<a href="#1.2">Roll</a></li>
+            <li>└─<a href="#1.1">Roll</a></li>
           </ul>
         </li>
       </ul>
     </aside>
     <main>
 
-<h1 id="1">RIO - RecIpe rOller</h1>
+<h1 id="1">Recipe roller</h1>
 
-<h2 id="1.1">Upload</h2>
+<p id="status">Loading recipes.csv...</p>
 
-<div id="drop">
-  <p>Drop a .csv or .txt file here</p>
-  <p>or</p>
-  <button type="button" id="pick">Choose file</button>
-  <input type="file" id="file" accept=".csv,.txt,text/csv,text/plain" hidden>
-  <p id="status">No file loaded.</p>
-</div>
-
-<h2 id="1.2">Roll</h2>
+<h2 id="1.1">Roll</h2>
 
 <button type="button" id="roll">Roll</button>
 <div id="result"></div>
@@ -63,42 +52,28 @@
   </div>
 
   <script>
+    var CSV_FILE = "rio.csv"; // must sit next to this html file
     var STEP = 12; // ascii codes advanced per frame; lower = slower animation
 
     var recipes = [];
     var rollId = 0;
-    var drop = document.getElementById("drop");
-    var fileInput = document.getElementById("file");
     var statusEl = document.getElementById("status");
     var result = document.getElementById("result");
     var previewBox = document.getElementById("previewbox");
 
-    document.getElementById("pick").onclick = function () { fileInput.click(); };
-    fileInput.onchange = function () { if (fileInput.files[0]) load(fileInput.files[0]); };
-
-    drop.ondragover = function (e) { e.preventDefault(); drop.className = "over"; };
-    drop.ondragleave = function () { drop.className = ""; };
-    drop.ondrop = function (e) {
-      e.preventDefault();
-      drop.className = "";
-      if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]);
-    };
-
-    // Stop the browser from opening a file dropped outside the box
-    window.ondragover = function (e) { e.preventDefault(); };
-    window.ondrop = function (e) { e.preventDefault(); };
-
-    function load(file) {
-      var reader = new FileReader();
-      reader.onload = function () {
-        recipes = reader.result.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+    fetch(CSV_FILE)
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      })
+      .then(function (text) {
+        recipes = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
         statusEl.textContent = recipes.length + " items loaded";
-        rollId++;
-        result.textContent = "";
-        previewBox.textContent = "";
-      };
-      reader.readAsText(file);
-    }
+      })
+      .catch(function (err) {
+        statusEl.textContent = "Could not load " + CSV_FILE + " (" + err.message + "). " +
+          "Place it in the same folder as this html file and serve it over http, not file://.";
+      });
 
     // Final text: plain, with the URL turned into a link
     function renderFinal(line, url) {
@@ -159,7 +134,7 @@
       var id = ++rollId; // starting a new roll cancels any running animation
       result.textContent = "";
       previewBox.textContent = "";
-      if (!recipes.length) { result.textContent = "Load a file first."; return; }
+      if (!recipes.length) { result.textContent = "No items loaded."; return; }
 
       var line = recipes[Math.floor(Math.random() * recipes.length)];
       var m = line.match(/https?:\/\/[^\s,;"']+/);
