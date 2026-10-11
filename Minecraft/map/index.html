@@ -1,0 +1,16 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>World Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>html,body,#map{height:100%;margin:0;background:#111}
+.leaflet-tile{image-rendering:pixelated}
+#c{position:absolute;z-index:1000;bottom:8px;left:8px;background:#000a;color:#fff;font:13px monospace;padding:4px 8px}</style>
+</head><body><div id="map"></div><div id="c">X: - Z: -</div>
+<script>
+const MAXZ=9, W=114688, H=53248, OX=-102400, OZ=-28672;
+const map=L.map('map',{crs:L.CRS.Simple,minZoom:0,maxZoom:MAXZ+3,zoomSnap:0.5});
+L.tileLayer('tiles/{z}/{y}/{x}.png',{tileSize:256,minNativeZoom:0,maxNativeZoom:MAXZ,maxZoom:MAXZ+3,noWrap:true}).addTo(map);
+const b=L.latLngBounds(map.unproject([0,0],MAXZ),map.unproject([W,H],MAXZ));
+map.fitBounds(b);
+map.on('mousemove',e=>{const p=map.project(e.latlng,MAXZ);
+ document.getElementById('c').textContent='X: '+Math.floor(p.x+OX)+'  Z: '+Math.floor(p.y+OZ);});
+</script></body></html>
